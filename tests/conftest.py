@@ -2,26 +2,26 @@ import pytest
 from brownie import config
 
 @pytest.fixture
-def andre(accounts):
-    # Andre, giver of tokens, and maker of yield
-    yield accounts[0]
-
+def currency(interface):
+    #curveseth token = 0xA3D87FffcE63B53E0d54fAa1cc983B7eB0b74A9c
+    yield interface.ERC20('0xA3D87FffcE63B53E0d54fAa1cc983B7eB0b74A9c')
 
 @pytest.fixture
-def token(andre, Token):
-    yield andre.deploy(Token)
+def whale(accounts, web3, currency, chain):
+    acc = accounts.at('0xceee009efa7166bf4b5475fcd9045f67fc8269b5', force=True)
 
+    assert currency.balanceOf(acc)  > 0
+    
+    yield acc
 
 @pytest.fixture
 def gov(accounts):
     # yearn multis... I mean YFI governance. I swear!
     yield accounts[1]
 
-
 @pytest.fixture
 def rewards(gov):
     yield gov  # TODO: Add rewards contract
-
 
 @pytest.fixture
 def guardian(accounts):
@@ -30,9 +30,11 @@ def guardian(accounts):
 
 
 @pytest.fixture
-def vault(pm, gov, rewards, guardian, token):
+def vault(pm, gov, rewards, guardian, currency):
     Vault = pm(config["dependencies"][0]).Vault
-    vault = guardian.deploy(Vault, token, gov, rewards, "", "")
+    vault = gov.deploy(Vault)
+    vault.initialize(currency, gov, rewards, "", "", guardian)
+    vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
 
 
@@ -47,6 +49,17 @@ def keeper(accounts):
     # This is our trusty bot!
     yield accounts[4]
 
+@pytest.fixture
+def live_strategy(Strategy):
+    strategy = Strategy.at('0xCa8C5e51e235EF1018B2488e4e78e9205064D736')
+
+    yield strategy
+
+@pytest.fixture
+def live_vault(pm):
+    Vault = pm(config["dependencies"][0]).Vault
+    vault = Vault.at('0xdCD90C7f6324cfa40d7169ef80b12031770B4325')
+    yield vault
 
 @pytest.fixture
 def strategy(strategist, keeper, vault, Strategy):
@@ -54,64 +67,7 @@ def strategy(strategist, keeper, vault, Strategy):
     strategy.setKeeper(keeper)
     yield strategy
 
-
 @pytest.fixture
 def nocoiner(accounts):
     # Has no tokens (DeFi is a ponzi scheme!)
     yield accounts[5]
-
-
-@pytest.fixture
-def pleb(accounts, andre, token, vault):
-    # Small fish in a big pond
-    a = accounts[6]
-    # Has 0.01% of tokens (heard about this new DeFi thing!)
-    bal = token.totalSupply() // 10000
-    token.transfer(a, bal, {"from": andre})
-    # Unlimited Approvals
-    token.approve(vault, 2 ** 256 - 1, {"from": a})
-    # Deposit half their stack
-    vault.deposit(bal // 2, {"from": a})
-    yield a
-
-
-@pytest.fixture
-def chad(accounts, andre, token, vault):
-    # Just here to have fun!
-    a = accounts[7]
-    # Has 0.1% of tokens (somehow makes money trying every new thing)
-    bal = token.totalSupply() // 1000
-    token.transfer(a, bal, {"from": andre})
-    # Unlimited Approvals
-    token.approve(vault, 2 ** 256 - 1, {"from": a})
-    # Deposit half their stack
-    vault.deposit(bal // 2, {"from": a})
-    yield a
-
-
-@pytest.fixture
-def greyhat(accounts, andre, token, vault):
-    # Chaotic evil, will eat you alive
-    a = accounts[8]
-    # Has 1% of tokens (earned them the *hard way*)
-    bal = token.totalSupply() // 100
-    token.transfer(a, bal, {"from": andre})
-    # Unlimited Approvals
-    token.approve(vault, 2 ** 256 - 1, {"from": a})
-    # Deposit half their stack
-    vault.deposit(bal // 2, {"from": a})
-    yield a
-
-
-@pytest.fixture
-def whale(accounts, andre, token, vault):
-    # Totally in it for the tech
-    a = accounts[9]
-    # Has 10% of tokens (was in the ICO)
-    bal = token.totalSupply() // 10
-    token.transfer(a, bal, {"from": andre})
-    # Unlimited Approvals
-    token.approve(vault, 2 ** 256 - 1, {"from": a})
-    # Deposit half their stack
-    vault.deposit(bal // 2, {"from": a})
-    yield a
