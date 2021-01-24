@@ -32,7 +32,7 @@ interface ICurveFi {
     ) external;
 
     function add_liquidity(
-        // stETH pool
+        // sETH pool
         uint256[2] calldata amounts,
         uint256 min_mint_amount
     ) external payable;
@@ -65,6 +65,11 @@ interface ICurveFi {
         int128 to,
         uint256 _from_amount
     ) external view returns (uint256);
+
+    function calc_token_amount(uint256[2] calldata amounts, bool is_deposit)
+        external
+        view
+        returns (uint256);
 }
 
 interface ICrvV3 is IERC20 {

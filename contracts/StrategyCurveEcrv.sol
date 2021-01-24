@@ -16,25 +16,28 @@ import {Math} from "@openzeppelin/contracts/math/Math.sol";
 
 import {Gauge, ICurveFi, ICrvV3, IMinter} from "../interfaces/curve.sol";
 import {IUniswapV2Router02} from "../interfaces/uniswap.sol";
-import {ISEth} from "../interfaces/synthetix.sol";
 
-contract StrategyCurvesETH is BaseStrategy {
+contract StrategyCurveEcrv is BaseStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
+
+    address private uniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    address private sushiswapRouter =
+        0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
+
+    address public crvRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    address[] public crvPath;
 
     ICurveFi public CurveStableSwap =
         ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sETH StableSwap pool contract
     Gauge public CurveLiquidityGaugeV2 =
         Gauge(address(0x3C0FFFF15EA30C35d7A85B85c0782D6c94e1d238)); // Curve eCRV Gauge contract
 
-    IUniswapV2Router02 public constant uniswapRouter =
-        IUniswapV2Router02(address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D));
-
     address public constant weth =
         address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    ISEth public sETH =
-        ISEth(address(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb));
+    IERC20 public sETH =
+        IERC20(address(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb));
     ICrvV3 public CRV =
         ICrvV3(address(0xD533a949740bb3306d119CC777fa900bA034cd52));
 
@@ -48,20 +51,26 @@ contract StrategyCurvesETH is BaseStrategy {
         // debtThreshold = 0;
 
         want.safeApprove(address(CurveLiquidityGaugeV2), uint256(-1));
-        sETH.approve(address(CurveStableSwap), uint256(-1));
-        CRV.approve(address(uniswapRouter), uint256(-1));
+        CRV.approve(crvRouter, uint256(-1));
+
+        crvPath = new address[](2);
+        crvPath[0] = address(CRV);
+        crvPath[1] = weth;
     }
 
     function name() external view override returns (string memory) {
-        return "StrategyCurvesETH";
+        return "StrategyCurveEcrv";
     }
 
     function estimatedTotalAssets() public view override returns (uint256) {
         uint256 currentBal = CurveLiquidityGaugeV2.balanceOf(address(this));
 
-        // TODO: add estimated value of claimable CRV to balance
-        //uint256 claimableCRV = CurveLiquidityGaugeV2.claimable_reward(address(this), address(CRV));
-        //uint256 CRVshaare = _estimateSell(address(CRV), claimableCRV);
+        // uint256 claimableCrv =
+        //     CurveLiquidityGaugeV2.claimable_reward(address(this), address(CRV));
+        // uint256 claimableCrvValueWeth =
+        //     _estimateSell(address(CRV), claimableCrv); // Value in WETH
+        // uint256 claimableCrvValueEcrv =
+        //     CurveStableSwap.calc_token_amount([claimableCrvValueWeth, 0], true); // Value in eCRV LP Token
 
         return currentBal;
     }
@@ -90,10 +99,11 @@ contract StrategyCurvesETH is BaseStrategy {
             }
 
             uint256 ethBalance = address(this).balance;
-            uint256 sEthBalance =
-                sETH.submit{value: ethBalance / 2}(strategist);
-            ethBalance = address(this).balance;
-            sEthBalance = sETH.balanceOf(address(this));
+            uint256 sEthBalance = 0; // TODO: mint sETH and add_liquidity in a balanced proportion
+            // uint256 sEthBalance =
+            //     sETH.submit{value: ethBalance / 2}(strategist);
+            // ethBalance = address(this).balance;
+            // sEthBalance = sETH.balanceOf(address(this));
 
             CurveStableSwap.add_liquidity{value: ethBalance}(
                 [ethBalance, sEthBalance],
@@ -198,15 +208,24 @@ contract StrategyCurvesETH is BaseStrategy {
     //
     // from StrategystETHCurve
     //
-    function _sell(address currency, uint256 amount) internal {
-        address[] memory path = new address[](2);
-        path[0] = currency;
-        path[1] = weth;
+    function setCRVRouter(bool isUniswap, address[] calldata _path)
+        public
+        onlyGovernance
+    {
+        if (isUniswap) {
+            crvRouter = uniswapRouter;
+        } else {
+            crvRouter = sushiswapRouter;
+        }
+        crvPath = _path;
+        CRV.approve(crvRouter, uint256(-1));
+    }
 
-        uniswapRouter.swapExactTokensForETH(
+    function _sell(address currency, uint256 amount) internal {
+        IUniswapV2Router02(crvRouter).swapExactTokensForETH(
             amount,
             uint256(0),
-            path,
+            crvPath,
             address(this),
             now
         );
@@ -220,7 +239,8 @@ contract StrategyCurvesETH is BaseStrategy {
         address[] memory path = new address[](2);
         path[0] = currency;
         path[1] = weth;
-        uint256[] memory amounts = uniswapRouter.getAmountsOut(amount, path);
+        uint256[] memory amounts =
+            IUniswapV2Router02(crvRouter).getAmountsOut(amount, path);
         outAmount = amounts[amounts.length - 1];
 
         return outAmount;
