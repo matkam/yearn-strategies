@@ -16,6 +16,7 @@ import {Math} from "@openzeppelin/contracts/math/Math.sol";
 
 import {Gauge, ICurveFi, ICrvV3, IMinter} from "../interfaces/curve.sol";
 import {IUniswapV2Router02} from "../interfaces/uniswap.sol";
+import {IWETH} from "../interfaces/misc.sol";
 
 contract StrategyCurveEcrv is BaseStrategy {
     using SafeERC20 for IERC20;
@@ -34,8 +35,8 @@ contract StrategyCurveEcrv is BaseStrategy {
     Gauge public CurveLiquidityGaugeV2 =
         Gauge(address(0x3C0FFFF15EA30C35d7A85B85c0782D6c94e1d238)); // Curve eCRV Gauge contract
 
-    address public constant weth =
-        address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    IWETH public WETH =
+        IWETH(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
     IERC20 public sETH =
         IERC20(address(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb));
     ICrvV3 public CRV =
@@ -55,7 +56,7 @@ contract StrategyCurveEcrv is BaseStrategy {
 
         crvPath = new address[](2);
         crvPath[0] = address(CRV);
-        crvPath[1] = weth;
+        crvPath[1] = address(WETH);
     }
 
     function name() external view override returns (string memory) {
@@ -206,7 +207,7 @@ contract StrategyCurveEcrv is BaseStrategy {
     }
 
     //
-    // from StrategystETHCurve
+    // helper functions
     //
     function setCRVRouter(bool isUniswap, address[] calldata _path)
         public
@@ -238,11 +239,14 @@ contract StrategyCurveEcrv is BaseStrategy {
     {
         address[] memory path = new address[](2);
         path[0] = currency;
-        path[1] = weth;
+        path[1] = address(WETH);
         uint256[] memory amounts =
             IUniswapV2Router02(crvRouter).getAmountsOut(amount, path);
         outAmount = amounts[amounts.length - 1];
 
         return outAmount;
     }
+
+    // enable ability to recieve ETH
+    receive() external payable {}
 }
