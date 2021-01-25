@@ -99,10 +99,10 @@ def pleb(accounts, andre, token_ecrv, vault_ecrv):
     # Has 0.01% of tokens (heard about this new DeFi thing!)
     bal = token_ecrv.totalSupply() // 10000
     token_ecrv.transfer(a, bal, {"from": andre})
-    # Unlimited Approvals
-    token_ecrv.approve(vault_ecrv, 2 ** 256 - 1, {"from": a})
-    # Deposit half their stack
-    vault_ecrv.deposit(bal // 2, {"from": a})
+    # # Unlimited Approvals
+    # token_ecrv.approve(vault_ecrv, 2 ** 256 - 1, {"from": a})
+    # # Deposit half their stack
+    # vault_ecrv.deposit(bal // 2, {"from": a})
     yield a
 
 
@@ -113,10 +113,10 @@ def chad(accounts, andre, token, vault_weth):
     # Has 0.1% of tokens (somehow makes money trying every new thing)
     bal = token.totalSupply() // 1000
     token.transfer(a, bal, {"from": andre})
-    # Unlimited Approvals
-    token.approve(vault_weth, 2 ** 256 - 1, {"from": a})
-    # Deposit half their stack
-    vault_weth.deposit(bal // 2, {"from": a})
+    # # Unlimited Approvals
+    # token.approve(vault_weth, 2 ** 256 - 1, {"from": a})
+    # # Deposit half their stack
+    # vault_weth.deposit(bal // 2, {"from": a})
     yield a
 
 
@@ -127,10 +127,10 @@ def greyhat(accounts, andre, token_weth, vault_weth):
     # Has 1% of tokens (earned them the *hard way*)
     bal = token_weth.totalSupply() // 100
     token_weth.transfer(a, bal, {"from": andre})
-    # Unlimited Approvals
-    token_weth.approve(vault_weth, 2 ** 256 - 1, {"from": a})
-    # Deposit half their stack
-    vault_weth.deposit(bal // 2, {"from": a})
+    # # Unlimited Approvals
+    # token_weth.approve(vault_weth, 2 ** 256 - 1, {"from": a})
+    # # Deposit half their stack
+    # vault_weth.deposit(bal // 2, {"from": a})
     yield a
 
 
@@ -141,8 +141,8 @@ def whale(accounts, andre, token_ecrv, vault_ecrv):
     # Has 10% of tokens (was in the ICO)
     bal = token_ecrv.totalSupply() // 10
     token_ecrv.transfer(a, bal, {"from": andre})
-    # Unlimited Approvals
-    token_ecrv.approve(vault_ecrv, 2 ** 256 - 1, {"from": a})
-    # Deposit half their stack
-    vault_ecrv.deposit(bal // 2, {"from": a})
+    # # Unlimited Approvals
+    # token_ecrv.approve(vault_ecrv, 2 ** 256 - 1, {"from": a})
+    # # Deposit half their stack
+    # vault_ecrv.deposit(bal // 2, {"from": a})
     yield a
