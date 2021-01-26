@@ -64,16 +64,26 @@ contract StrategyCurveEcrv is BaseStrategy {
     }
 
     function estimatedTotalAssets() public view override returns (uint256) {
-        uint256 currentBal = CurveLiquidityGaugeV2.balanceOf(address(this));
-
+        return CurveLiquidityGaugeV2.balanceOf(address(this));
         // uint256 claimableCrv =
-        //     CurveLiquidityGaugeV2.claimable_reward(address(this), address(CRV));
-        // uint256 claimableCrvValueWeth =
-        //     _estimateSell(address(CRV), claimableCrv); // Value in WETH
-        // uint256 claimableCrvValueEcrv =
-        //     CurveStableSwap.calc_token_amount([claimableCrvValueWeth, 0], true); // Value in eCRV LP Token
+        //     CurveLiquidityGaugeV2.claimable_reward(
+        //         address(this),
+        //         address(want)
+        //     );
+        // if (claimableCrv > 0) {
+        //     // Value in ETH
+        //     uint256 claimableCrvValueWeth =
+        //         _estimateSell(address(CRV), claimableCrv);
 
-        return currentBal;
+        //     // Value in eCRV LP Token
+        //     uint256 claimableCrvValueEcrv =
+        //         CurveStableSwap.calc_token_amount(
+        //             [claimableCrvValueWeth, 0],
+        //             true
+        //         );
+
+        //     currentBal += claimableCrvValueEcrv;
+        // }
     }
 
     function prepareReturn(uint256 _debtOutstanding)
@@ -106,10 +116,12 @@ contract StrategyCurveEcrv is BaseStrategy {
             // ethBalance = address(this).balance;
             // sEthBalance = sETH.balanceOf(address(this));
 
-            CurveStableSwap.add_liquidity{value: ethBalance}(
-                [ethBalance, sEthBalance],
-                0
-            );
+            if (ethBalance > 0 || sEthBalance > 0) {
+                CurveStableSwap.add_liquidity{value: ethBalance}(
+                    [ethBalance, sEthBalance],
+                    0
+                );
+            }
 
             _profit = want.balanceOf(address(this));
         }
@@ -232,20 +244,20 @@ contract StrategyCurveEcrv is BaseStrategy {
         );
     }
 
-    function _estimateSell(address currency, uint256 amount)
-        internal
-        view
-        returns (uint256 outAmount)
-    {
-        address[] memory path = new address[](2);
-        path[0] = currency;
-        path[1] = address(WETH);
-        uint256[] memory amounts =
-            IUniswapV2Router02(crvRouter).getAmountsOut(amount, path);
-        outAmount = amounts[amounts.length - 1];
+    // function _estimateSell(address currency, uint256 amount)
+    //     internal
+    //     view
+    //     returns (uint256 outAmount)
+    // {
+    //     address[] memory path = new address[](2);
+    //     path[0] = currency;
+    //     path[1] = address(WETH);
+    //     uint256[] memory amounts =
+    //         IUniswapV2Router02(crvRouter).getAmountsOut(amount, path);
+    //     outAmount = amounts[amounts.length - 1];
 
-        return outAmount;
-    }
+    //     return outAmount;
+    // }
 
     // enable ability to recieve ETH
     receive() external payable {}
