@@ -126,9 +126,6 @@ contract StrategyCurveEcrv is BaseStrategy {
         // NOTE: Try to adjust positions so that `_debtOutstanding` can be freed up on *next* harvest (not immediately)
 
         uint256 _toInvest = want.balanceOf(address(this));
-        if (_debtOutstanding > _toInvest) {
-            return;
-        }
         CurveLiquidityGaugeV2.deposit(_toInvest);
     }
 
