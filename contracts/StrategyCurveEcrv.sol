@@ -91,18 +91,16 @@ contract StrategyCurveEcrv is BaseStrategy {
             }
 
             uint256 ethBalance = address(this).balance;
-            uint256 sEthBalance = 0; // TODO: mint sETH and add_liquidity in a balanced proportion
+            // TODO: mint sETH and add_liquidity in a balanced proportion
             // uint256 sEthBalance =
             //     sETH.submit{value: ethBalance / 2}(strategist);
             // ethBalance = address(this).balance;
             // sEthBalance = sETH.balanceOf(address(this));
 
-            if (ethBalance > 0 || sEthBalance > 0) {
-                CurveStableSwap.add_liquidity{value: ethBalance}(
-                    [ethBalance, sEthBalance],
-                    0
-                );
-            }
+            CurveStableSwap.add_liquidity{value: ethBalance}(
+                [ethBalance, 0],
+                0
+            );
 
             _profit = want.balanceOf(address(this));
         }
