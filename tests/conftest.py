@@ -1,20 +1,20 @@
 import pytest
-from brownie import config, Wei
+from brownie import config, Contract
 
 
 @pytest.fixture
 def token_weth(interface):
-    yield interface.IWETH("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")
+    yield Contract("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2")
 
 
 @pytest.fixture
 def token_seth(interface):
-    yield interface.IERC20("0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb")
+    yield Contract("0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb")
 
 
 @pytest.fixture
 def token_ecrv(interface, gov):
-    yield interface.IERC20("0xA3D87FffcE63B53E0d54fAa1cc983B7eB0b74A9c", owner=gov)
+    yield Contract("0xA3D87FffcE63B53E0d54fAa1cc983B7eB0b74A9c", owner=gov)
 
 
 @pytest.fixture
@@ -29,7 +29,6 @@ def andre(accounts, token_ecrv, gov):
     a = accounts[0]
 
     # Take half of all eCRV
-    # token_ecrv.approve(live_ecrv_whale, 2 ** 256 - 1, {"from": live_ecrv_whale})
     token_ecrv.transfer(a, live_ecrv_whale_bal // 2, {"from": live_ecrv_whale})
 
     yield a
@@ -59,12 +58,6 @@ def vault_ecrv(pm, gov, rewards, guardian, token_ecrv):
     vault.initialize(token_ecrv, gov, rewards, "", "", guardian)
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
-
-
-# @pytest.fixture
-# def live_vault_ecrv(pm):
-#     Vault = pm(config["dependencies"][0]).Vault
-#     yield Vault.at('0x000')
 
 
 @pytest.fixture
@@ -115,20 +108,6 @@ def chad(accounts, andre, token, vault_weth):
     token.transfer(a, bal, {"from": andre})
     # # Unlimited Approvals
     # token.approve(vault_weth, 2 ** 256 - 1, {"from": a})
-    # # Deposit half their stack
-    # vault_weth.deposit(bal // 2, {"from": a})
-    yield a
-
-
-@pytest.fixture
-def greyhat(accounts, andre, token_weth, vault_weth):
-    # Chaotic evil, will eat you alive
-    a = accounts[8]
-    # Has 1% of tokens (earned them the *hard way*)
-    bal = token_weth.totalSupply() // 100
-    token_weth.transfer(a, bal, {"from": andre})
-    # # Unlimited Approvals
-    # token_weth.approve(vault_weth, 2 ** 256 - 1, {"from": a})
     # # Deposit half their stack
     # vault_weth.deposit(bal // 2, {"from": a})
     yield a
