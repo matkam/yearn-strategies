@@ -149,4 +149,3 @@ def withdraw(share, whale, dai, vault):
     balanceAfter = dai.balanceOf(whale)
     moneyOut = balanceAfter - balanceBefore
     print("Money Out:", Wei(moneyOut).to("ether"))
-

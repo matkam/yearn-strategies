@@ -1,17 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity >=0.6.0 <0.7.0;
+pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import {
-    BaseStrategy,
-    StrategyParams
-} from "@yearnvaults/contracts/BaseStrategy.sol";
-import {
-    SafeERC20,
-    SafeMath,
-    IERC20,
-    Address
-} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import {BaseStrategy} from "@yearnvaults/contracts/BaseStrategy.sol";
+import {SafeERC20, SafeMath, IERC20, Address} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/math/Math.sol";
 
 import {Gauge, ICurveFi, ICrvV3, IMinter} from "../interfaces/curve.sol";
@@ -24,33 +16,19 @@ contract StrategyCurveEcrv is BaseStrategy {
     using SafeMath for uint256;
 
     address private uniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-    address private sushiswapRouter =
-        0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
+    address private sushiswapRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
 
     address public crvRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     address[] public crvPath;
 
-    ICurveFi public CurveStableSwap =
-        ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sETH StableSwap pool contract
-    Gauge public CurveLiquidityGaugeV2 =
-        Gauge(address(0x3C0FFFF15EA30C35d7A85B85c0782D6c94e1d238)); // Curve eCRV Gauge contract
+    ICurveFi public CurveStableSwap = ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sETH StableSwap pool contract
+    Gauge public CurveLiquidityGaugeV2 = Gauge(address(0x3C0FFFF15EA30C35d7A85B85c0782D6c94e1d238)); // Curve eCRV Gauge contract
 
-    IWETH public WETH =
-        IWETH(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
-    IERC20 public sETH =
-        IERC20(address(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb));
-    ICrvV3 public CRV =
-        ICrvV3(address(0xD533a949740bb3306d119CC777fa900bA034cd52));
-
-    // address public constant YearnCurveYCRVVoter = address(0xF147b8125d2ef93FB6965Db97D6746952a133934);
-    // address public constant YearnStrategyProxy = address(0xC17ADf949f524213a540609c386035D7D685B16F);
+    IWETH public WETH = IWETH(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
+    IERC20 public sETH = IERC20(address(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb));
+    ICrvV3 public CRV = ICrvV3(address(0xD533a949740bb3306d119CC777fa900bA034cd52));
 
     constructor(address _vault) public BaseStrategy(_vault) {
-        // You can set these parameters on deployment to whatever you want
-        // maxReportDelay = 6300;
-        // profitFactor = 100;
-        // debtThreshold = 0;
-
         want.safeApprove(address(CurveLiquidityGaugeV2), uint256(-1));
         CRV.approve(crvRouter, uint256(-1));
 
@@ -91,74 +69,35 @@ contract StrategyCurveEcrv is BaseStrategy {
             }
 
             uint256 ethBalance = address(this).balance;
-            // TODO: mint sETH and add_liquidity in a balanced proportion
-            // uint256 sEthBalance =
-            //     sETH.submit{value: ethBalance / 2}(strategist);
-            // ethBalance = address(this).balance;
-            // sEthBalance = sETH.balanceOf(address(this));
-
-            CurveStableSwap.add_liquidity{value: ethBalance}(
-                [ethBalance, 0],
-                0
-            );
+            CurveStableSwap.add_liquidity{value: ethBalance}([ethBalance, 0], 0);
 
             _profit = want.balanceOf(address(this));
         }
 
         if (_debtOutstanding > 0) {
             if (_debtOutstanding > _profit) {
-                uint256 stakedBal =
-                    CurveLiquidityGaugeV2.balanceOf(address(this));
-                CurveLiquidityGaugeV2.withdraw(
-                    Math.min(stakedBal, _debtOutstanding - _profit)
-                );
+                uint256 stakedBal = CurveLiquidityGaugeV2.balanceOf(address(this));
+                CurveLiquidityGaugeV2.withdraw(Math.min(stakedBal, _debtOutstanding - _profit));
             }
 
-            _debtPayment = Math.min(
-                _debtOutstanding,
-                want.balanceOf(address(this)).sub(_profit)
-            );
+            _debtPayment = Math.min(_debtOutstanding, want.balanceOf(address(this)).sub(_profit));
         }
     }
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
-        // TODO: Do something to invest excess `want` tokens (from the Vault) into your positions
-        // NOTE: Try to adjust positions so that `_debtOutstanding` can be freed up on *next* harvest (not immediately)
-
         uint256 _toInvest = want.balanceOf(address(this));
         CurveLiquidityGaugeV2.deposit(_toInvest);
     }
 
-    function liquidatePosition(uint256 _amountNeeded)
-        internal
-        override
-        returns (uint256 _liquidatedAmount, uint256 _loss)
-    {
-        // TODO: Do stuff here to free up to `_amountNeeded` from all positions back into `want`
-        // NOTE: Maintain invariant `want.balanceOf(this) >= _liquidatedAmount`
-        // NOTE: Maintain invariant `_liquidatedAmount + _loss <= _amountNeeded`
-
-        // uint256 totalAssets = want.balanceOf(address(this));
-        // if (_amountNeeded > totalAssets) {
-        //     _liquidatedAmount = totalAssets;
-        //     _loss = _amountNeeded.sub(totalAssets);
-        // } else {
-        //     _liquidatedAmount = _amountNeeded;
-        // }
-
+    function liquidatePosition(uint256 _amountNeeded) internal override returns (uint256 _liquidatedAmount, uint256 _loss) {
         uint256 wantBal = want.balanceOf(address(this));
         uint256 stakedBal = CurveLiquidityGaugeV2.balanceOf(address(this));
 
         if (_amountNeeded > wantBal) {
-            CurveLiquidityGaugeV2.withdraw(
-                Math.min(stakedBal, _amountNeeded - wantBal)
-            );
+            CurveLiquidityGaugeV2.withdraw(Math.min(stakedBal, _amountNeeded - wantBal));
         }
 
-        _liquidatedAmount = Math.min(
-            _amountNeeded,
-            want.balanceOf(address(this))
-        );
+        _liquidatedAmount = Math.min(_amountNeeded, want.balanceOf(address(this)));
     }
 
     // NOTE: Can override `tendTrigger` and `harvestTrigger` if necessary
@@ -169,25 +108,7 @@ contract StrategyCurveEcrv is BaseStrategy {
         prepareReturn(CurveLiquidityGaugeV2.balanceOf(address(this)));
     }
 
-    // Override this to add all tokens/tokenized positions this contract manages
-    // on a *persistent* basis (e.g. not just for swapping back to want ephemerally)
-    // NOTE: Do *not* include `want`, already included in `sweep` below
-    //
-    // Example:
-    //
-    //    function protectedTokens() internal override view returns (address[] memory) {
-    //      address[] memory protected = new address[](3);
-    //      protected[0] = tokenA;
-    //      protected[1] = tokenB;
-    //      protected[2] = tokenC;
-    //      return protected;
-    //    }
-    function protectedTokens()
-        internal
-        view
-        override
-        returns (address[] memory)
-    {
+    function protectedTokens() internal view override returns (address[] memory) {
         address[] memory protected = new address[](1);
         protected[0] = address(CurveLiquidityGaugeV2);
 
@@ -197,10 +118,7 @@ contract StrategyCurveEcrv is BaseStrategy {
     //
     // helper functions
     //
-    function setCRVRouter(bool isUniswap, address[] calldata _path)
-        public
-        onlyGovernance
-    {
+    function setCRVRouter(bool isUniswap, address[] calldata _path) public onlyGovernance {
         if (isUniswap) {
             crvRouter = uniswapRouter;
         } else {
@@ -211,13 +129,7 @@ contract StrategyCurveEcrv is BaseStrategy {
     }
 
     function _sell(address currency, uint256 amount) internal {
-        IUniswapV2Router02(crvRouter).swapExactTokensForETH(
-            amount,
-            uint256(0),
-            crvPath,
-            address(this),
-            now
-        );
+        IUniswapV2Router02(crvRouter).swapExactTokensForETH(amount, uint256(0), crvPath, address(this), now);
     }
 
     // enable ability to recieve ETH
