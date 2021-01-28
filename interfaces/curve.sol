@@ -11,6 +11,8 @@ interface Gauge {
 
     function claim_rewards() external;
 
+    function claimable_tokens(address) external view returns (uint256);
+
     function claimable_reward(address, address) external view returns (uint256);
 
     function withdraw(uint256) external;
@@ -59,6 +61,8 @@ interface ICurveFi {
     ) external returns (uint256[] memory amounts);
 
     function calc_token_amount(uint256[2] calldata amounts, bool is_deposit) external view returns (uint256);
+
+    function calc_withdraw_one_coin(uint256[2] calldata amounts, int128 i) external view returns (uint256);
 }
 
 interface ICrvV3 is IERC20 {
