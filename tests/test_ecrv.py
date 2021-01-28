@@ -21,8 +21,8 @@ def test_ops(
 
     strategy_ecrv.harvest({"from": strategist})
 
-    print("seth = ", token_seth.balanceOf(strategy_ecrv) / 1e18)
-    print("ecrv = ", strategy_ecrv.balance() / 1e18)
+    print("sETH = ", token_seth.balanceOf(strategy_ecrv) / 1e18)
+    print("eCRV = ", strategy_ecrv.balance() / 1e18)
 
     genericStateOfStrat(strategy_ecrv, token_ecrv, vault_ecrv)
     genericStateOfVault(vault_ecrv, token_ecrv)

@@ -52,12 +52,23 @@ def guardian(accounts):
 
 
 @pytest.fixture
+def dev(accounts):
+    yield accounts.at("0x7BACf22f747f2f4B983081C0AA76DdDFecd008AB", force=True)
+
+
+@pytest.fixture
 def vault_ecrv(pm, gov, rewards, guardian, token_ecrv):
     Vault = pm(config["dependencies"][0]).Vault
     vault = guardian.deploy(Vault)
     vault.initialize(token_ecrv, gov, rewards, "", "", guardian)
     vault.setDepositLimit(2 ** 256 - 1, {"from": gov})
     yield vault
+
+
+@pytest.fixture
+def vault_ecrv_live(pm):
+    Vault = pm(config["dependencies"][0]).Vault
+    yield Vault.at("0x0e880118C29F095143dDA28e64d95333A9e75A47")
 
 
 @pytest.fixture
@@ -77,6 +88,11 @@ def strategy_ecrv(strategist, keeper, vault_ecrv, StrategyCurveEcrv):
     strategy = strategist.deploy(StrategyCurveEcrv, vault_ecrv)
     strategy.setKeeper(keeper)
     yield strategy
+
+
+@pytest.fixture
+def strategy_ecrv_live(StrategyCurveEcrv):
+    yield StrategyCurveEcrv.at("0x3B1a1AE6052ccD643a250fa843c1fB20F9246E1a")
 
 
 @pytest.fixture
