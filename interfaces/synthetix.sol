@@ -2,6 +2,8 @@
 pragma solidity >=0.6.0 <0.7.0;
 pragma experimental ABIEncoderV2;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+
 interface IAddressResolver {
     function getAddress(bytes32 name) external view returns (address);
 
@@ -10,13 +12,7 @@ interface IAddressResolver {
     function requireAndGetAddress(bytes32 name, string calldata reason) external view returns (address);
 }
 
-interface ISynth {
-    // Views
-    function currencyKey() external view returns (bytes32);
-
-    function transferableSynths(address account) external view returns (uint256);
-
-    // Mutative functions
+interface ISynth is IERC20 {
     function transferAndSettle(address to, uint256 value) external returns (bool);
 
     function transferFromAndSettle(
@@ -24,15 +20,17 @@ interface ISynth {
         address to,
         uint256 value
     ) external returns (bool);
-
-    // Restricted: used internally to Synthetix
-    function burn(address account, uint256 amount) external;
-
-    function issue(address account, uint256 amount) external;
 }
 
-interface ISynthetix {
+interface ISynthetix is IERC20 {
     function exchange(
+        bytes32 sourceCurrencyKey,
+        uint256 sourceAmount,
+        bytes32 destinationCurrencyKey
+    ) external returns (uint256 amountReceived);
+
+    function exchangeOnBehalf(
+        address exchangeForAddress,
         bytes32 sourceCurrencyKey,
         uint256 sourceAmount,
         bytes32 destinationCurrencyKey
@@ -54,6 +52,8 @@ interface IExchanger {
             uint256 exchangeFeeRate
         );
 
+    function maxSecsLeftInWaitingPeriod(address account, bytes32 currencyKey) external view returns (uint256);
+
     // Mutative functions
     function exchange(
         address from,
@@ -62,4 +62,8 @@ interface IExchanger {
         bytes32 destinationCurrencyKey,
         address destinationAddress
     ) external returns (uint256 amountReceived);
+}
+
+interface DelegateApprovals {
+    function approveExchangeOnBehalf(address delegate) external;
 }

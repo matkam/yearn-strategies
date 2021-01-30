@@ -52,6 +52,14 @@ interface ICurveFi {
         uint256 _from_amount
     ) external view returns (uint256);
 
+    function swapExactTokensForETH(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+
     function swapExactTokensForTokens(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -62,7 +70,7 @@ interface ICurveFi {
 
     function calc_token_amount(uint256[2] calldata amounts, bool is_deposit) external view returns (uint256);
 
-    function calc_withdraw_one_coin(uint256[2] calldata amounts, int128 i) external view returns (uint256);
+    function calc_withdraw_one_coin(uint256 amount, int128 i) external view returns (uint256);
 }
 
 interface ICrvV3 is IERC20 {
