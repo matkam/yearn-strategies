@@ -123,14 +123,14 @@ contract ZapYveCRV is Ownable {
 
     function _zapIn(uint256 sethAmount) internal {
         uint256 ethBalance = address(this).balance;
-        uint256 sethBalance = Math.min(sethAmount, sETH.balanceOf(msg.sender));
-        require(ethBalance > 0 || sethBalance > 0, "INSUFFICIENT FUNDS");
+        sethAmount = Math.min(sethAmount, sETH.balanceOf(msg.sender));
+        require(ethBalance > 0 || sethAmount > 0, "INSUFFICIENT FUNDS");
 
-        if (sethBalance > 0) {
-            // uint256 waitLeft = SynthetixExchanger.maxSecsLeftInWaitingPeriod(msg.sender, "sETH");
+        if (sethAmount > 0) {
+            // uint256 waitLeft = SynthetixExchanger.maxSecsLeftInWaitingPeriod(msg.sender, "sETH")
             sETH.transferFromAndSettle(msg.sender, address(this), sethAmount);
         }
-        CurveStableSwap.add_liquidity{value: ethBalance}([ethBalance, sethBalance], 0);
+        CurveStableSwap.add_liquidity{value: ethBalance}([ethBalance, sethAmount], 0);
 
         uint256 outAmount = want.balanceOf(address(this));
         // require(outAmount.mul(slippageAllowance.add(10000)).div(10000) >= ethBalance.add(sethBalance), "TOO MUCH SLIPPAGE");

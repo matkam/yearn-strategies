@@ -1,5 +1,8 @@
 from brownie import Wei, web3
 
+sethKey = 0x7345544800000000000000000000000000000000000000000000000000000000
+susdKey = 0x7355534400000000000000000000000000000000000000000000000000000000
+
 
 def test_zap(accounts, ZapYveCRV, interface, chain):
     whale = accounts.at("0xbe0eb53f46cd790cd13851d5eff43d12404d33e8", force=True)
@@ -7,8 +10,8 @@ def test_zap(accounts, ZapYveCRV, interface, chain):
     sETH = interface.ISynth(zap.sETH())
     sUSD = interface.ISynth(zap.sUSD())
     synthetixExchanger = interface.IExchanger(zap.SynthetixExchanger())
-
     delegateApprovals = interface.DelegateApprovals("0x15fd6e554874B9e70F832Ed37f231Ac5E142362f")
+
     delegateApprovals.approveExchangeOnBehalf(zap, {"from": whale})
     sETH.approve(zap.address, 2 ** 256 - 1, {"from": whale})
     sUSD.approve(zap.address, 2 ** 256 - 1, {"from": whale})
@@ -32,10 +35,9 @@ def test_zap(accounts, ZapYveCRV, interface, chain):
     sethBalance = sETH.balanceOf(whale) / Wei("1 ether")
     print(f"sETH actual, 100% swap: {sethBalance} sETH")
 
-    waitLeft = synthetixExchanger.maxSecsLeftInWaitingPeriod(whale.address, web3.toBytes(text="sETH"))
+    waitLeft = synthetixExchanger.maxSecsLeftInWaitingPeriod(whale.address, sethKey)
     print(f"> Waiting period: {waitLeft} seconds")
     chain.sleep(waitLeft)
-    # chain.sleep(600)
     chain.mine(1)
 
-    # zap.zapIn(sethBalance, {"from": whale})
+    zap.zapIn(sethBalance, {"from": whale})

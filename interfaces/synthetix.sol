@@ -52,6 +52,8 @@ interface IExchanger {
             uint256 exchangeFeeRate
         );
 
+    function hasWaitingPeriodOrSettlementOwing(address account, bytes32 currencyKey) external view returns (bool);
+
     function maxSecsLeftInWaitingPeriod(address account, bytes32 currencyKey) external view returns (uint256);
 
     // Mutative functions
