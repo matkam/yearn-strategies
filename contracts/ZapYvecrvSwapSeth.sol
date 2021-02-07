@@ -7,6 +7,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeERC20, SafeMath, IERC20, Address} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import {ICurveFi} from "../interfaces/curve.sol";
+import {IUniswapV2Router02} from "../interfaces/uniswap.sol";
 
 interface IYVault is IERC20 {
     function deposit(uint256 amount, address recipient) external;
@@ -16,21 +17,39 @@ interface IYVault is IERC20 {
     function pricePerShare() external view returns (uint256);
 }
 
-contract ZapYvecrv is Ownable {
+contract ZapYvecrvSwapSeth is Ownable {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
 
+    address public constant uniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    address public constant sushiswapRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
+
     IYVault public yVault = IYVault(address(0x0e880118C29F095143dDA28e64d95333A9e75A47));
     ICurveFi public CurveStableSwap = ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sETH StableSwap pool contract
+    IUniswapV2Router02 public SwapRouter;
 
     IERC20 public want = IERC20(address(0xA3D87FffcE63B53E0d54fAa1cc983B7eB0b74A9c)); // Curve.fi ETH/sETH (eCRV)
+    IERC20 public WETH = IERC20(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
+    IERC20 public sETH = IERC20(address(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb)); // Synthetix ProxysETH
 
     uint256 public constant DEFAULT_SLIPPAGE = 200; // slippage allowance out of 10000: 2%
     bool private _noReentry = false;
+    address[] public swapPathZapIn;
+    address[] public swapPathZapOut;
 
     constructor() public Ownable() {
+        SwapRouter = IUniswapV2Router02(uniswapRouter);
+
+        swapPathZapIn = new address[](2);
+        swapPathZapIn[0] = address(WETH);
+        swapPathZapIn[1] = address(sETH);
+
+        // In approves
+        sETH.approve(address(CurveStableSwap), uint256(-1));
         want.safeApprove(address(yVault), uint256(-1));
+
+        // Out approves
         want.safeApprove(address(CurveStableSwap), uint256(-1));
     }
 
@@ -60,12 +79,39 @@ contract ZapYvecrv is Ownable {
         uint256 ethDeposit = address(this).balance;
         require(ethDeposit > 1, "INSUFFICIENT ETH DEPOSIT");
 
-        CurveStableSwap.add_liquidity{value: ethDeposit}([ethDeposit, 0], 0);
+        (uint256 oneSidedWantAmount, ) = estimateZapIn(ethDeposit, 0);
+        (uint256 halfSwapWantAmount, uint256 halfSwapEthAmountSwap) = estimateZapIn(ethDeposit, 50);
+        (uint256 fullSwapWantAmount, uint256 fullSwapEthAmountSwap) = estimateZapIn(ethDeposit, 100);
+
+        if (fullSwapWantAmount > oneSidedWantAmount && fullSwapWantAmount > halfSwapWantAmount) {
+            SwapRouter.swapExactETHForTokens{value: halfSwapEthAmountSwap}(0, swapPathZapIn, address(this), now);
+        } else if (halfSwapWantAmount > oneSidedWantAmount && halfSwapWantAmount > fullSwapWantAmount) {
+            SwapRouter.swapExactETHForTokens{value: fullSwapEthAmountSwap}(0, swapPathZapIn, address(this), now);
+        }
+
+        uint256 ethBalance = address(this).balance;
+        uint256 sethBalance = sETH.balanceOf(address(this));
+        CurveStableSwap.add_liquidity{value: ethBalance}([ethBalance, sethBalance], 0);
 
         uint256 outAmount = want.balanceOf(address(this));
         require(outAmount.mul(slippageAllowance.add(10000)).div(10000) >= ethDeposit, "TOO MUCH SLIPPAGE");
 
         yVault.deposit(outAmount, msg.sender);
+    }
+
+    function estimateZapIn(uint256 ethDeposit, uint256 percentSwap) public view returns (uint256 estimatedWant, uint256 ethAmountForSwap) {
+        require(percentSwap >= 0 && percentSwap <= 100, "INVALID PERCENTAGE VALUE");
+
+        uint256 estimatedSethAmount = 0;
+        if (percentSwap > 0) {
+            ethAmountForSwap = ethDeposit.mul(percentSwap).div(100);
+            ethDeposit = ethDeposit.sub(ethAmountForSwap);
+
+            uint256[] memory amounts = SwapRouter.getAmountsOut(ethAmountForSwap, swapPathZapIn);
+            estimatedSethAmount = amounts[amounts.length - 1];
+        }
+
+        estimatedWant = CurveStableSwap.calc_token_amount([ethDeposit, estimatedSethAmount], true);
     }
 
     //
@@ -114,5 +160,15 @@ contract ZapYvecrv is Ownable {
     function updateVaultAddress(address _vault) external onlyOwner {
         yVault = IYVault(_vault);
         want.safeApprove(_vault, uint256(-1));
+    }
+
+    function setSwapRouter(bool isUniswap, address[] calldata _swapPathZapIn) external onlyOwner {
+        if (isUniswap) {
+            SwapRouter = IUniswapV2Router02(uniswapRouter);
+        } else {
+            SwapRouter = IUniswapV2Router02(sushiswapRouter);
+        }
+
+        swapPathZapIn = _swapPathZapIn;
     }
 }

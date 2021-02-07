@@ -6,20 +6,6 @@ def test_zap(accounts, ZapYvecrv, vault_ecrv_live):
     zap = whale.deploy(ZapYvecrv)
     vault_ecrv_live.approve(zap.address, 2 ** 256 - 1, {"from": whale})
 
-    print("Zap In 100 ETH eCRV estimates")
-    print("----------------------------")
-    lpTokenEstimate, _ = zap.estimateZapIn(Wei("100 ether"), 0)
-    lpTokenEstimatePretty = lpTokenEstimate / Wei("1 ether")
-    print(f"  0% swap: {lpTokenEstimatePretty} eCRV")
-
-    lpTokenEstimate, _ = zap.estimateZapIn(Wei("100 ether"), 50)
-    lpTokenEstimatePretty = lpTokenEstimate / Wei("1 ether")
-    print(f" 50% swap: {lpTokenEstimatePretty} eCRV")
-
-    lpTokenEstimate, _ = zap.estimateZapIn(Wei("100 ether"), 100)
-    lpTokenEstimatePretty = lpTokenEstimate / Wei("1 ether")
-    print(f"100% swap: {lpTokenEstimatePretty} eCRV")
-
     print("")
     print("Zap In 100 ETH actuals")
     print("----------------------------")
