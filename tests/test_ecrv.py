@@ -2,12 +2,7 @@ from helpers import genericStateOfStrat, genericStateOfVault
 from brownie import Wei
 
 
-def test_ops(
-    token_seth, token_ecrv, strategy_ecrv, chain, vault_ecrv, whale, gov, strategist,
-):
-    debt_ratio = 10_000
-    vault_ecrv.addStrategy(strategy_ecrv, debt_ratio, 0, 1000, {"from": gov})
-
+def test_ops(token_seth, token_ecrv, strategy_ecrv, chain, vault_ecrv, whale, strategist):
     token_ecrv.approve(vault_ecrv, 2 ** 256 - 1, {"from": whale})
     whalebefore = token_ecrv.balanceOf(whale)
     vault_ecrv.deposit(Wei("100 ether"), {"from": whale})
@@ -28,8 +23,7 @@ def test_ops(
     genericStateOfVault(vault_ecrv, token_ecrv)
 
     print(
-        "\nEstimated APR: ",
-        "{:.2%}".format(((vault_ecrv.totalAssets() - 100 * 1e18) * 12) / (100 * 1e18)),
+        "\nEstimated APR: ", "{:.2%}".format(((vault_ecrv.totalAssets() - 100 * 1e18) * 12) / (100 * 1e18)),
     )
 
     vault_ecrv.withdraw({"from": whale})
@@ -39,19 +33,7 @@ def test_ops(
     print("Whale profit: ", (token_ecrv.balanceOf(whale) - whalebefore) / 1e18)
 
 
-def test_migrate(
-    token_ecrv,
-    StrategyCurveEcrv,
-    strategy_ecrv,
-    chain,
-    vault_ecrv,
-    whale,
-    gov,
-    strategist,
-):
-    debt_ratio = 10_000
-    vault_ecrv.addStrategy(strategy_ecrv, debt_ratio, 0, 1000, {"from": gov})
-
+def test_migrate(token_ecrv, StrategyCurveEcrv, strategy_ecrv, chain, vault_ecrv, whale, gov, strategist):
     token_ecrv.approve(vault_ecrv, 2 ** 256 - 1, {"from": whale})
     vault_ecrv.deposit(Wei("100 ether"), {"from": whale})
     strategy_ecrv.harvest({"from": strategist})
@@ -68,8 +50,7 @@ def test_migrate(
     genericStateOfVault(vault_ecrv, token_ecrv)
 
     print(
-        "\nEstimated APR: ",
-        "{:.2%}".format(((vault_ecrv.totalAssets() - 100 * 1e18) * 12) / (100 * 1e18)),
+        "\nEstimated APR: ", "{:.2%}".format(((vault_ecrv.totalAssets() - 100 * 1e18) * 12) / (100 * 1e18)),
     )
 
     strategy_ecrv2 = strategist.deploy(StrategyCurveEcrv, vault_ecrv)
@@ -80,9 +61,6 @@ def test_migrate(
 
 
 def test_revoke(token_ecrv, strategy_ecrv, vault_ecrv, whale, gov, strategist):
-    debt_ratio = 10_000
-    vault_ecrv.addStrategy(strategy_ecrv, debt_ratio, 0, 1000, {"from": gov})
-
     token_ecrv.approve(vault_ecrv, 2 ** 256 - 1, {"from": whale})
     vault_ecrv.deposit(Wei("100 ether"), {"from": whale})
     strategy_ecrv.harvest({"from": strategist})
@@ -99,14 +77,12 @@ def test_revoke(token_ecrv, strategy_ecrv, vault_ecrv, whale, gov, strategist):
 
 
 def test_reduce_limit(token_ecrv, strategy_ecrv, vault_ecrv, whale, gov, strategist):
-    debt_ratio = 10_000
-    vault_ecrv.addStrategy(strategy_ecrv, debt_ratio, 0, 1000, {"from": gov})
-
     token_ecrv.approve(vault_ecrv, 2 ** 256 - 1, {"from": whale})
     vault_ecrv.deposit(Wei("100 ether"), {"from": whale})
     strategy_ecrv.harvest({"from": strategist})
 
-    assert token_ecrv.balanceOf(vault_ecrv) == 0
+    dust = 1_500_000
+    assert token_ecrv.balanceOf(vault_ecrv) < dust
     vault_ecrv.updateStrategyDebtRatio(strategy_ecrv, 5_000, {"from": gov})
     strategy_ecrv.harvest({"from": strategist})
-    assert token_ecrv.balanceOf(vault_ecrv) > 0
+    assert token_ecrv.balanceOf(vault_ecrv) > dust

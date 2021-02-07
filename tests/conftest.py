@@ -18,11 +18,9 @@ def token_ecrv(interface, gov):
 
 
 @pytest.fixture
-def andre(accounts, token_ecrv, gov):
+def andre(accounts, token_ecrv):
     # eCRV Gauge contract
-    live_ecrv_whale = accounts.at(
-        "0x3C0FFFF15EA30C35d7A85B85c0782D6c94e1d238", force=True
-    )
+    live_ecrv_whale = accounts.at("0x3C0FFFF15EA30C35d7A85B85c0782D6c94e1d238", force=True)
     live_ecrv_whale_bal = token_ecrv.balanceOf(live_ecrv_whale)
 
     # Andre, giver of tokens, and maker of yield
@@ -38,6 +36,11 @@ def andre(accounts, token_ecrv, gov):
 def gov(accounts):
     # yearn multis... I mean YFI governance. I swear!
     yield accounts[1]
+
+
+@pytest.fixture
+def gov_live(accounts):
+    yield accounts.at("0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52", force=True)
 
 
 @pytest.fixture
@@ -84,9 +87,14 @@ def keeper(accounts):
 
 
 @pytest.fixture
-def strategy_ecrv(strategist, keeper, vault_ecrv, StrategyCurveEcrv):
+def strategy_ecrv(strategist, keeper, vault_ecrv, StrategyCurveEcrv, gov, gov_live, voter_proxy):
     strategy = strategist.deploy(StrategyCurveEcrv, vault_ecrv)
     strategy.setKeeper(keeper)
+
+    debt_ratio = 10_000
+    vault_ecrv.addStrategy(strategy, debt_ratio, 0, 1000, {"from": gov})
+    voter_proxy.approveStrategy(strategy.gauge(), strategy, {"from": gov_live})
+
     yield strategy
 
 
@@ -96,13 +104,18 @@ def strategy_ecrv_live(StrategyCurveEcrv):
 
 
 @pytest.fixture
+def voter_proxy(interface):
+    yield interface.StrategyProxy("0x9a3a03C614dc467ACC3e81275468e033c98d960E")
+
+
+@pytest.fixture
 def nocoiner(accounts):
     # Has no tokens (DeFi is a ponzi scheme!)
     yield accounts[5]
 
 
 @pytest.fixture
-def pleb(accounts, andre, token_ecrv, vault_ecrv):
+def pleb(accounts, andre, token_ecrv):
     # Small fish in a big pond
     a = accounts[6]
     # Has 0.01% of tokens (heard about this new DeFi thing!)
@@ -116,7 +129,7 @@ def pleb(accounts, andre, token_ecrv, vault_ecrv):
 
 
 @pytest.fixture
-def chad(accounts, andre, token, vault_weth):
+def chad(accounts, andre, token):
     # Just here to have fun!
     a = accounts[7]
     # Has 0.1% of tokens (somehow makes money trying every new thing)
@@ -130,7 +143,7 @@ def chad(accounts, andre, token, vault_weth):
 
 
 @pytest.fixture
-def whale(accounts, andre, token_ecrv, vault_ecrv):
+def whale(accounts, andre, token_ecrv):
     # Totally in it for the tech
     a = accounts[9]
     # Has 10% of tokens (was in the ICO)

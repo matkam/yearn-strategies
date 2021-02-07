@@ -18,7 +18,7 @@ interface IYVault is IERC20 {
     function pricePerShare() external view returns (uint256);
 }
 
-contract ZapYveCRV is Ownable {
+contract ZapYvecrvSusd is Ownable {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
