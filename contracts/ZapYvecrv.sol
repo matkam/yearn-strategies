@@ -8,7 +8,6 @@ import {SafeERC20, SafeMath, IERC20, Address} from "@openzeppelin/contracts/toke
 
 import {ICurveFi} from "../interfaces/curve.sol";
 import {IUniswapV2Router02} from "../interfaces/uniswap.sol";
-import {ISynthetix, IExchanger, ISynth} from "../interfaces/synthetix.sol";
 
 interface IYVault is IERC20 {
     function deposit(uint256 amount, address recipient) external;
@@ -32,7 +31,7 @@ contract ZapYvecrv is Ownable {
 
     IERC20 public want = IERC20(address(0xA3D87FffcE63B53E0d54fAa1cc983B7eB0b74A9c)); // Curve.fi ETH/sETH (eCRV)
     IERC20 public WETH = IERC20(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
-    ISynth public sETH = ISynth(address(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb)); // Synthetix ProxysETH
+    IERC20 public sETH = IERC20(address(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb)); // Synthetix ProxysETH
 
     uint256 public constant DEFAULT_SLIPPAGE = 200; // slippage allowance out of 10000: 2%
     bool private _noReentry = false;
@@ -80,15 +79,14 @@ contract ZapYvecrv is Ownable {
         uint256 ethDeposit = address(this).balance;
         require(ethDeposit > 1, "INSUFFICIENT ETH DEPOSIT");
 
-        uint256 oneSidedWantAmount = CurveStableSwap.calc_token_amount([ethDeposit, 0], true);
+        (uint256 oneSidedWantAmount, ) = estimateZapIn(ethDeposit, 0);
+        (uint256 halfSwapWantAmount, uint256 halfSwapEthAmountSwap) = estimateZapIn(ethDeposit, 50);
+        (uint256 fullSwapWantAmount, uint256 fullSwapEthAmountSwap) = estimateZapIn(ethDeposit, 100);
 
-        uint256 halfEthDeposit = ethDeposit.div(2);
-        uint256[] memory amounts = SwapRouter.getAmountsOut(halfEthDeposit, swapPathZapIn);
-        uint256 estimatedSethAmount = amounts[amounts.length - 1];
-        uint256 swapWantAmount = CurveStableSwap.calc_token_amount([halfEthDeposit, estimatedSethAmount], true);
-
-        if (swapWantAmount > oneSidedWantAmount) {
-            SwapRouter.swapExactETHForTokens{value: halfEthDeposit}(0, swapPathZapIn, address(this), now);
+        if (fullSwapWantAmount > oneSidedWantAmount && fullSwapWantAmount > halfSwapWantAmount) {
+            SwapRouter.swapExactETHForTokens{value: halfSwapEthAmountSwap}(0, swapPathZapIn, address(this), now);
+        } else if (halfSwapWantAmount > oneSidedWantAmount && halfSwapWantAmount > fullSwapWantAmount) {
+            SwapRouter.swapExactETHForTokens{value: fullSwapEthAmountSwap}(0, swapPathZapIn, address(this), now);
         }
 
         uint256 ethBalance = address(this).balance;
@@ -99,6 +97,21 @@ contract ZapYvecrv is Ownable {
         require(outAmount.mul(slippageAllowance.add(10000)).div(10000) >= ethDeposit, "TOO MUCH SLIPPAGE");
 
         yVault.deposit(outAmount, msg.sender);
+    }
+
+    function estimateZapIn(uint256 ethDeposit, uint256 percentSwap) public view returns (uint256 estimatedWant, uint256 ethAmountForSwap) {
+        require(percentSwap >= 0 && percentSwap <= 100, "INVALID PERCENTAGE VALUE");
+
+        uint256 estimatedSethAmount = 0;
+        if (percentSwap > 0) {
+            ethAmountForSwap = ethDeposit.mul(percentSwap).div(100);
+            ethDeposit = ethDeposit.sub(ethAmountForSwap);
+
+            uint256[] memory amounts = SwapRouter.getAmountsOut(ethAmountForSwap, swapPathZapIn);
+            estimatedSethAmount = amounts[amounts.length - 1];
+        }
+
+        estimatedWant = CurveStableSwap.calc_token_amount([ethDeposit, estimatedSethAmount], true);
     }
 
     //

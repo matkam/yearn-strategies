@@ -16,22 +16,22 @@ def test_zap(accounts, ZapYvecrvSusd, interface, chain):
     sETH.approve(zap.address, 2 ** 256 - 1, {"from": whale})
     sUSD.approve(zap.address, 2 ** 256 - 1, {"from": whale})
 
-    print("Zap In 10 ETH eCRV estimates")
+    print("Zap In 100 ETH eCRV estimates")
     print("----------------------------")
-    lpTokenEstimate = zap.estimateZapInWithSwap(Wei("10 ether"), 0) / Wei("1 ether")
+    lpTokenEstimate = zap.estimateZapInWithSwap(Wei("100 ether"), 0) / Wei("1 ether")
     print(f"  0% swap: {lpTokenEstimate} eCRV")
 
-    lpTokenEstimate = zap.estimateZapInWithSwap(Wei("10 ether"), 50) / Wei("1 ether")
+    lpTokenEstimate = zap.estimateZapInWithSwap(Wei("100 ether"), 50) / Wei("1 ether")
     print(f" 50% swap: {lpTokenEstimate} eCRV")
 
-    lpTokenEstimate = zap.estimateZapInWithSwap(Wei("10 ether"), 100) / Wei("1 ether")
+    lpTokenEstimate = zap.estimateZapInWithSwap(Wei("100 ether"), 100) / Wei("1 ether")
     print(f"100% swap: {lpTokenEstimate} eCRV")
 
     print("")
-    print("Zap In 10 ETH actuals")
+    print("Zap In 100 ETH actuals")
     print("----------------------------")
 
-    zap.swapEthToSeth({"from": whale, "value": Wei("10 ether")})
+    zap.swapEthToSeth({"from": whale, "value": Wei("100 ether")})
     sethBalance = sETH.balanceOf(whale) / Wei("1 ether")
     print(f"sETH actual, 100% swap: {sethBalance} sETH")
 
