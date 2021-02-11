@@ -30,6 +30,7 @@ def test_zap(accounts, ZapYvecrvSwapSeth, vault_ecrv_live):
     print(f"Zap in: {yvTokensPretty} yveCRV")
 
     startingEthBalance = whale.balance()
+    
     zap.zapOut(yvTokens, 0, {"from": whale})
     zappedOutEth = whale.balance() - startingEthBalance
     zappedOutEthPretty = zappedOutEth / Wei("1 ether")

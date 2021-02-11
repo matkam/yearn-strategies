@@ -27,16 +27,16 @@ contract ZapYvecrvSusd is Ownable {
     address public constant sushiswapRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
 
     IYVault public yVault = IYVault(address(0x0e880118C29F095143dDA28e64d95333A9e75A47));
-    ICurveFi public CurveStableSwap = ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sETH StableSwap pool contract
-    IUniswapV2Router02 public SwapRouter;
-    // IAddressResolver public SynthetixResolver = IAddressResolver(address(0x823bE81bbF96BEc0e25CA13170F5AaCb5B79ba83)); // Synthetix AddressResolver contract
-    ISynthetix public Synthetix = ISynthetix(address(0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F)); // Synthetix ProxyERC20
-    IExchanger public SynthetixExchanger = IExchanger(address(0x0bfDc04B38251394542586969E2356d0D731f7DE));
+    ICurveFi public curveStableSwap = ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sEth StableSwap pool contract
+    IUniswapV2Router02 public swapRouter;
+    // IAddressResolver public SynthetixResolver = IAddressResolver(address(0x823bE81bbF96BEc0e25CA13170F5AaCb5B79ba83)); // synthetix AddressResolver contract
+    ISynthetix public synthetix = ISynthetix(address(0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F)); // synthetix ProxyERC20
+    IExchanger public synthetixExchanger = IExchanger(address(0x0bfDc04B38251394542586969E2356d0D731f7DE));
 
-    IERC20 public want = IERC20(address(0xA3D87FffcE63B53E0d54fAa1cc983B7eB0b74A9c)); // Curve.fi ETH/sETH (eCRV)
-    IERC20 public WETH = IERC20(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
-    ISynth public sETH = ISynth(address(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb)); // Synthetix ProxysETH
-    ISynth public sUSD = ISynth(address(0x57Ab1ec28D129707052df4dF418D58a2D46d5f51)); // Synthetix ProxyERC20sUSD
+    IERC20 public want = IERC20(address(0xA3D87FffcE63B53E0d54fAa1cc983B7eB0b74A9c)); // Curve.fi ETH/sEth (eCRV)
+    IERC20 public weth = IERC20(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
+    ISynth public sEth = ISynth(address(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb)); // synthetix ProxysETH
+    ISynth public sUsd = ISynth(address(0x57Ab1ec28D129707052df4dF418D58a2D46d5f51)); // synthetix ProxyERC20sUSD
 
     // uint256 public constant DEFAULT_SLIPPAGE = 50; // slippage allowance out of 10000: 5%
     bool private _noReentry = false;
@@ -44,27 +44,27 @@ contract ZapYvecrvSusd is Ownable {
     address[] public swapPathZapOut;
 
     constructor() public Ownable() {
-        SwapRouter = IUniswapV2Router02(sushiswapRouter);
+        swapRouter = IUniswapV2Router02(sushiswapRouter);
 
         swapPathZapIn = new address[](2);
-        swapPathZapIn[0] = address(WETH);
-        swapPathZapIn[1] = address(sUSD);
+        swapPathZapIn[0] = address(weth);
+        swapPathZapIn[1] = address(sUsd);
 
         swapPathZapOut = new address[](2);
-        swapPathZapOut[0] = address(sUSD);
-        swapPathZapOut[1] = address(WETH);
+        swapPathZapOut[0] = address(sUsd);
+        swapPathZapOut[1] = address(weth);
 
         // In approves
-        // Route: ETH ->(SwapRouter)-> sUSD ->(Synthetix)-> sETH ->(CurveStableSwap)-> eCRV/want ->(yVault)-> yveCRV
-        sUSD.approve(address(Synthetix), uint256(-1));
-        sETH.approve(address(CurveStableSwap), uint256(-1));
+        // Route: ETH ->(swapRouter)-> sUsd ->(synthetix)-> sEth ->(curveStableSwap)-> eCRV/want ->(yVault)-> yveCRV
+        sUsd.approve(address(synthetix), uint256(-1));
+        sEth.approve(address(curveStableSwap), uint256(-1));
         want.safeApprove(address(yVault), uint256(-1));
 
         // Out approves
-        // Route: yveCRV ->(yVault)-> eCRV/want ->(CurveStableSwap)-> sETH ->(Synthetix)-> sUSD ->(SwapRouter)-> ETH
-        want.safeApprove(address(CurveStableSwap), uint256(-1));
-        sETH.approve(address(Synthetix), uint256(-1));
-        sUSD.approve(address(SwapRouter), uint256(-1));
+        // Route: yveCRV ->(yVault)-> eCRV/want ->(curveStableSwap)-> sEth ->(synthetix)-> sUsd ->(swapRouter)-> ETH
+        want.safeApprove(address(curveStableSwap), uint256(-1));
+        sEth.approve(address(synthetix), uint256(-1));
+        sUsd.approve(address(swapRouter), uint256(-1));
     }
 
     // Accept ETH and zap in with no token swap
@@ -88,29 +88,29 @@ contract ZapYvecrvSusd is Ownable {
             uint256 swappingEthAmount = ethAmount.mul(percentSwapSeth).div(100);
             ethAmount = ethAmount.sub(swappingEthAmount);
 
-            uint256[] memory amounts = SwapRouter.getAmountsOut(swappingEthAmount, swapPathZapIn);
+            uint256[] memory amounts = swapRouter.getAmountsOut(swappingEthAmount, swapPathZapIn);
             uint256 estimatedSusdAmount = amounts[amounts.length - 1];
-            (estimatedSethAmount, , ) = SynthetixExchanger.getAmountsForExchange(estimatedSusdAmount, "sUSD", "sETH");
+            (estimatedSethAmount, , ) = synthetixExchanger.getAmountsForExchange(estimatedSusdAmount, "sUSD", "sETH");
         }
 
-        return CurveStableSwap.calc_token_amount([ethAmount, estimatedSethAmount], true);
+        return curveStableSwap.calc_token_amount([ethAmount, estimatedSethAmount], true);
     }
 
     // Zap In - Step 2 (optional)
     // Requires user to run: DelegateApprovals.approveExchangeOnBehalf(<zap_contract_address>)
-    // Synthetix DelegateApprovals contract: 0x15fd6e554874B9e70F832Ed37f231Ac5E142362f
+    // synthetix DelegateApprovals contract: 0x15fd6e554874B9e70F832Ed37f231Ac5E142362f
     function swapEthToSeth() external payable {
         uint256 swappingEthAmount = address(this).balance;
-        SwapRouter.swapExactETHForTokens{value: swappingEthAmount}(swappingEthAmount, swapPathZapIn, address(this), now);
+        swapRouter.swapExactETHForTokens{value: swappingEthAmount}(swappingEthAmount, swapPathZapIn, address(this), now);
 
-        uint256 susdAmount = sUSD.balanceOf(address(this));
-        sUSD.transfer(msg.sender, susdAmount);
-        Synthetix.exchangeOnBehalf(msg.sender, "sUSD", susdAmount, "sETH");
+        uint256 susdAmount = sUsd.balanceOf(address(this));
+        sUsd.transfer(msg.sender, susdAmount);
+        synthetix.exchangeOnBehalf(msg.sender, "sUSD", susdAmount, "sETH");
     }
 
     // Zap In - Step 3
-    // Requires user to run: sETH.approve(<zap_contract_address>, <seth_amount>)
-    // Synthetix ProxysETH contract: 0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb
+    // Requires user to run: sEth.approve(<zap_contract_address>, <seth_amount>)
+    // synthetix ProxysETH contract: 0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb
     function zapIn(uint256 sethAmount) external payable {
         if (_noReentry) {
             return;
@@ -123,14 +123,14 @@ contract ZapYvecrvSusd is Ownable {
 
     function _zapIn(uint256 sethAmount) internal {
         uint256 ethBalance = address(this).balance;
-        sethAmount = Math.min(sethAmount, sETH.balanceOf(msg.sender));
+        sethAmount = Math.min(sethAmount, sEth.balanceOf(msg.sender));
         require(ethBalance > 0 || sethAmount > 0, "INSUFFICIENT FUNDS");
 
         if (sethAmount > 0) {
-            // uint256 waitLeft = SynthetixExchanger.maxSecsLeftInWaitingPeriod(msg.sender, "sETH")
-            sETH.transferFromAndSettle(msg.sender, address(this), sethAmount);
+            // uint256 waitLeft = synthetixExchanger.maxSecsLeftInWaitingPeriod(msg.sender, "sEth")
+            sEth.transferFromAndSettle(msg.sender, address(this), sethAmount);
         }
-        CurveStableSwap.add_liquidity{value: ethBalance}([ethBalance, sethAmount], 0);
+        curveStableSwap.add_liquidity{value: ethBalance}([ethBalance, sethAmount], 0);
 
         uint256 outAmount = want.balanceOf(address(this));
         // require(outAmount.mul(slippageAllowance.add(10000)).div(10000) >= ethBalance.add(sethBalance), "TOO MUCH SLIPPAGE");
@@ -153,20 +153,20 @@ contract ZapYvecrvSusd is Ownable {
             uint256 swappingWantAmount = wantAmount.mul(percentSwapSusd).div(100);
             wantAmount = wantAmount.sub(swappingWantAmount);
 
-            uint256 sethAmount = CurveStableSwap.calc_withdraw_one_coin(swappingWantAmount, 1);
-            (uint256 susdAmount, , ) = SynthetixExchanger.getAmountsForExchange(sethAmount, "sETH", "sUSD");
-            uint256[] memory amounts = SwapRouter.getAmountsOut(susdAmount, swapPathZapOut);
+            uint256 sethAmount = curveStableSwap.calc_withdraw_one_coin(swappingWantAmount, 1);
+            (uint256 susdAmount, , ) = synthetixExchanger.getAmountsForExchange(sethAmount, "sETH", "sUSD");
+            uint256[] memory amounts = swapRouter.getAmountsOut(susdAmount, swapPathZapOut);
             estimatedSwappedEthAmount = amounts[amounts.length - 1];
         }
 
-        uint256 estimatedEthAmount = CurveStableSwap.calc_withdraw_one_coin(wantAmount, 0);
+        uint256 estimatedEthAmount = curveStableSwap.calc_withdraw_one_coin(wantAmount, 0);
 
         return estimatedEthAmount.add(estimatedSwappedEthAmount);
     }
 
     // Zap Out - Step 2
     // Requires user to run: DelegateApprovals.approveExchangeOnBehalf(<zap_contract_address>)
-    // Synthetix DelegateApprovals contract: 0x15fd6e554874B9e70F832Ed37f231Ac5E142362f
+    // synthetix DelegateApprovals contract: 0x15fd6e554874B9e70F832Ed37f231Ac5E142362f
     function zapOut(uint256 yvTokenAmount, uint256 percentSwapSusd) external {
         require(percentSwapSusd >= 0 && percentSwapSusd <= 100, "INVALID PERCENTAGE VALUE");
 
@@ -177,9 +177,9 @@ contract ZapYvecrvSusd is Ownable {
         uint256 wantBalance = want.balanceOf(address(this));
 
         _noReentry = true;
-        CurveStableSwap.remove_liquidity_one_coin(wantBalance.mul(percentSwapSusd).div(100), 0, 0);
+        curveStableSwap.remove_liquidity_one_coin(wantBalance.mul(percentSwapSusd).div(100), 0, 0);
         wantBalance = want.balanceOf(address(this));
-        CurveStableSwap.remove_liquidity_one_coin(wantBalance, 0, 0);
+        curveStableSwap.remove_liquidity_one_coin(wantBalance, 0, 0);
         _noReentry = false;
 
         uint256 ethBalance = address(this).balance;
@@ -187,10 +187,10 @@ contract ZapYvecrvSusd is Ownable {
             msg.sender.transfer(ethBalance);
         }
 
-        uint256 sethBalance = sETH.balanceOf(address(this));
+        uint256 sethBalance = sEth.balanceOf(address(this));
         if (sethBalance > 0) {
-            sETH.transfer(msg.sender, sethBalance);
-            Synthetix.exchangeOnBehalf(msg.sender, "sETH", sethBalance, "sUSD");
+            sEth.transfer(msg.sender, sethBalance);
+            synthetix.exchangeOnBehalf(msg.sender, "sETH", sethBalance, "sUSD");
         }
 
         uint256 leftover = yVault.balanceOf(address(this));
@@ -200,16 +200,16 @@ contract ZapYvecrvSusd is Ownable {
     }
 
     // Zap Out - Step 3 (Optional)
-    // Requires user to run: sUSD.approve(<zap_contract_address>, <susd_amount>)
-    // Synthetix ProxysETH contract: 0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb
+    // Requires user to run: sUsd.approve(<zap_contract_address>, <susd_amount>)
+    // synthetix ProxysETH contract: 0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb
     function swapSusdToEth(uint256 susdAmount) external {
-        uint256 susdBalance = Math.min(susdAmount, sUSD.balanceOf(msg.sender));
+        uint256 susdBalance = Math.min(susdAmount, sUsd.balanceOf(msg.sender));
         require(susdBalance > 0, "INSUFFICIENT FUNDS");
 
-        // uint256 waitLeft = SynthetixExchanger.maxSecsLeftInWaitingPeriod(msg.sender, "sUSD");
-        sUSD.transferFromAndSettle(msg.sender, address(this), susdBalance);
-        susdBalance = sUSD.balanceOf(address(this));
-        SwapRouter.swapExactTokensForETH(susdBalance, 0, swapPathZapOut, address(this), now);
+        // uint256 waitLeft = synthetixExchanger.maxSecsLeftInWaitingPeriod(msg.sender, "sUsd");
+        sUsd.transferFromAndSettle(msg.sender, address(this), susdBalance);
+        susdBalance = sUsd.balanceOf(address(this));
+        swapRouter.swapExactTokensForETH(susdBalance, 0, swapPathZapOut, address(this), now);
 
         uint256 ethBalance = address(this).balance;
         msg.sender.transfer(ethBalance);
@@ -242,14 +242,14 @@ contract ZapYvecrvSusd is Ownable {
         address[] calldata _swapPathZapOut
     ) external onlyOwner {
         if (isUniswap) {
-            SwapRouter = IUniswapV2Router02(uniswapRouter);
+            swapRouter = IUniswapV2Router02(uniswapRouter);
         } else {
-            SwapRouter = IUniswapV2Router02(sushiswapRouter);
+            swapRouter = IUniswapV2Router02(sushiswapRouter);
         }
 
         swapPathZapIn = _swapPathZapIn;
         swapPathZapIn = _swapPathZapOut;
 
-        sUSD.approve(address(SwapRouter), uint256(-1)); // For zap out
+        sUsd.approve(address(swapRouter), uint256(-1)); // For zap out
     }
 }

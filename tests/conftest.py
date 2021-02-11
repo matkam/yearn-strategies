@@ -44,6 +44,11 @@ def gov_live(accounts):
 
 
 @pytest.fixture
+def devychad(accounts):
+    yield accounts.at("0x846e211e8ba920B353FB717631C015cf04061Cc9", force=True)
+
+
+@pytest.fixture
 def rewards(gov):
     yield gov  # TODO: Add rewards contract
 
@@ -99,8 +104,12 @@ def strategy_ecrv(strategist, keeper, vault_ecrv, StrategyCurveEcrv, gov, gov_li
 
 
 @pytest.fixture
-def strategy_ecrv_live(StrategyCurveEcrv):
-    yield StrategyCurveEcrv.at("0x3B1a1AE6052ccD643a250fa843c1fB20F9246E1a")
+def strategy_ecrv_live():
+    yield Contract("0x3B1a1AE6052ccD643a250fa843c1fB20F9246E1a")
+
+@pytest.fixture
+def strategy_ecrv_live_new():
+    yield Contract("0x33e7c1718569d9f37B7a154B30Ae4f3C9f619A23")
 
 
 @pytest.fixture
