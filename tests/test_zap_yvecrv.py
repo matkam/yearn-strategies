@@ -4,7 +4,7 @@ from brownie import Wei, web3
 def test_zap(accounts, ZapYvecrv, vault_ecrv_live):
     whale = accounts.at("0xbe0eb53f46cd790cd13851d5eff43d12404d33e8", force=True)
     zap = whale.deploy(ZapYvecrv)
-    vault_ecrv_live.approve(zap.address, 2 ** 256 - 1, {"from": whale})
+    vault_ecrv_live.approve(zap, 2 ** 256 - 1, {"from": whale})
 
     print("")
     print("Zap In 100 ETH actuals")

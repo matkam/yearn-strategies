@@ -13,7 +13,7 @@ import {ISynthetix, IExchanger, ISynth} from "../interfaces/synthetix.sol";
 interface IYVault is IERC20 {
     function deposit(uint256 amount, address recipient) external;
 
-    function withdraw(uint256 shares, address recipient) external;
+    function withdraw() external;
 
     function pricePerShare() external view returns (uint256);
 }
@@ -146,7 +146,7 @@ contract ZapYvecrvSusd is Ownable {
     function estimateZapOutWithSwap(uint256 yvTokenAmount, uint256 percentSwapSusd) external view returns (uint256) {
         require(percentSwapSusd >= 0 && percentSwapSusd <= 100, "INVALID PERCENTAGE VALUE");
 
-        uint256 wantAmount = yvTokenAmount.mul(yVault.pricePerShare());
+        uint256 wantAmount = yvTokenAmount.mul(yVault.pricePerShare()).div(1e18);
 
         uint256 estimatedSwappedEthAmount = 0;
         if (percentSwapSusd > 0) {
@@ -159,7 +159,10 @@ contract ZapYvecrvSusd is Ownable {
             estimatedSwappedEthAmount = amounts[amounts.length - 1];
         }
 
-        uint256 estimatedEthAmount = curveStableSwap.calc_withdraw_one_coin(wantAmount, 0);
+        uint256 estimatedEthAmount = 0;
+        if (wantAmount > 0) {
+            estimatedEthAmount = curveStableSwap.calc_withdraw_one_coin(wantAmount, 0);
+        }
 
         return estimatedEthAmount.add(estimatedSwappedEthAmount);
     }
@@ -170,16 +173,22 @@ contract ZapYvecrvSusd is Ownable {
     function zapOut(uint256 yvTokenAmount, uint256 percentSwapSusd) external {
         require(percentSwapSusd >= 0 && percentSwapSusd <= 100, "INVALID PERCENTAGE VALUE");
 
-        uint256 yvTokenBalance = Math.min(yvTokenAmount, yVault.balanceOf(msg.sender));
-        require(yvTokenBalance > 0, "INSUFFICIENT FUNDS");
+        uint256 yvTokenWithdrawl = Math.min(yvTokenAmount, yVault.balanceOf(msg.sender));
+        require(yvTokenWithdrawl > 0, "INSUFFICIENT FUNDS");
 
-        yVault.withdraw(yvTokenBalance, address(this));
+        yVault.transferFrom(msg.sender, address(this), yvTokenWithdrawl);
+        yVault.withdraw();
         uint256 wantBalance = want.balanceOf(address(this));
 
         _noReentry = true;
-        curveStableSwap.remove_liquidity_one_coin(wantBalance.mul(percentSwapSusd).div(100), 0, 0);
-        wantBalance = want.balanceOf(address(this));
-        curveStableSwap.remove_liquidity_one_coin(wantBalance, 0, 0);
+        // TODO calculate amounts for curveStableSwap.remove_liquidity() instead
+        if (percentSwapSusd > 0) {
+            curveStableSwap.remove_liquidity_one_coin(wantBalance.mul(percentSwapSusd).div(100), 1, 0);
+            wantBalance = want.balanceOf(address(this));
+        }
+        if (wantBalance > 0) {
+            curveStableSwap.remove_liquidity_one_coin(wantBalance, 0, 0);
+        }
         _noReentry = false;
 
         uint256 ethBalance = address(this).balance;
@@ -209,10 +218,7 @@ contract ZapYvecrvSusd is Ownable {
         // uint256 waitLeft = synthetixExchanger.maxSecsLeftInWaitingPeriod(msg.sender, "sUsd");
         sUsd.transferFromAndSettle(msg.sender, address(this), susdBalance);
         susdBalance = sUsd.balanceOf(address(this));
-        swapRouter.swapExactTokensForETH(susdBalance, 0, swapPathZapOut, address(this), now);
-
-        uint256 ethBalance = address(this).balance;
-        msg.sender.transfer(ethBalance);
+        swapRouter.swapExactTokensForETH(susdBalance, 0, swapPathZapOut, msg.sender, now);
     }
 
     //
