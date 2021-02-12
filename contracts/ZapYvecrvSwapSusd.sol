@@ -181,7 +181,8 @@ contract ZapYvecrvSusd is Ownable {
         uint256 wantBalance = want.balanceOf(address(this));
 
         _noReentry = true;
-        // TODO calculate amounts for curveStableSwap.remove_liquidity() instead
+        // TODO calculate amounts for curveStableSwap.remove_liquidity_imbalance() instead
+        // curveStableSwap.remove_liquidity_imbalance([eth, seth], wantBalance);
         if (percentSwapSusd > 0) {
             curveStableSwap.remove_liquidity_one_coin(wantBalance.mul(percentSwapSusd).div(100), 1, 0);
             wantBalance = want.balanceOf(address(this));

@@ -81,7 +81,7 @@ def test_reduce_limit(token_ecrv, strategy_ecrv, vault_ecrv, whale, gov, strateg
     vault_ecrv.deposit(Wei("100 ether"), {"from": whale})
     strategy_ecrv.harvest({"from": strategist})
 
-    dust = 1_500_000
+    dust = 3_000_000
     assert token_ecrv.balanceOf(vault_ecrv) < dust
     vault_ecrv.updateStrategyDebtRatio(strategy_ecrv, 5_000, {"from": gov})
     strategy_ecrv.harvest({"from": strategist})

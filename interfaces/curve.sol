@@ -19,41 +19,15 @@ interface Gauge {
 }
 
 interface ICurveFi {
-    function add_liquidity(
-        uint256[2] calldata amounts,
-        uint256 min_mint_amount
-    ) external payable;
+    function add_liquidity(uint256[2] calldata amounts, uint256 min_mint_amount) external payable;
 
-    function remove_liquidity(uint256 _amount, uint256[2] calldata amounts) external;
+    function remove_liquidity_imbalance(uint256[2] calldata amounts, uint256 max_burn_amount) external;
 
     function remove_liquidity_one_coin(
         uint256 _token_amount,
         int128 i,
         uint256 min_amount
     ) external;
-
-    function exchange(
-        int128 from,
-        int128 to,
-        uint256 _from_amount,
-        uint256 _min_to_amount
-    ) external;
-
-    function swapExactTokensForETH(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external returns (uint256[] memory amounts);
-
-    function swapExactTokensForTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external returns (uint256[] memory amounts);
 
     function calc_token_amount(uint256[2] calldata amounts, bool is_deposit) external view returns (uint256);
 

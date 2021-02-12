@@ -109,8 +109,8 @@ def strategy_ecrv_live():
 
 
 @pytest.fixture
-def voter_proxy(interface):
-    yield interface.StrategyProxy("0x9a3a03C614dc467ACC3e81275468e033c98d960E")
+def voter_proxy():
+    yield Contract("0x9a3a03C614dc467ACC3e81275468e033c98d960E")
 
 
 @pytest.fixture
