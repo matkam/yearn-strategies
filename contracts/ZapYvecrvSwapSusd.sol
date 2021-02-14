@@ -8,7 +8,7 @@ import {SafeERC20, SafeMath, IERC20, Address} from "@openzeppelin/contracts/toke
 
 import {ICurveFi} from "../interfaces/curve.sol";
 import {IUniswapV2Router02} from "../interfaces/uniswap.sol";
-import {ISynthetix, IExchanger, ISynth} from "../interfaces/synthetix.sol";
+import {IAddressResolver, ISynthetix, IExchanger, ISynth} from "../interfaces/synthetix.sol";
 
 interface IYVault is IERC20 {
     function deposit(uint256 amount, address recipient) external;
@@ -29,9 +29,9 @@ contract ZapYvecrvSusd is Ownable {
     IYVault public yVault = IYVault(address(0x0e880118C29F095143dDA28e64d95333A9e75A47));
     ICurveFi public curveStableSwap = ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sEth StableSwap pool contract
     IUniswapV2Router02 public swapRouter;
-    // IAddressResolver public SynthetixResolver = IAddressResolver(address(0x823bE81bbF96BEc0e25CA13170F5AaCb5B79ba83)); // synthetix AddressResolver contract
-    ISynthetix public synthetix = ISynthetix(address(0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F)); // synthetix ProxyERC20
-    IExchanger public synthetixExchanger = IExchanger(address(0x0bfDc04B38251394542586969E2356d0D731f7DE));
+    IAddressResolver public synthetixResolver = IAddressResolver(address(0x823bE81bbF96BEc0e25CA13170F5AaCb5B79ba83)); // synthetix AddressResolver contract
+    // ISynthetix public synthetix = ISynthetix(address(0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F)); // synthetix ProxyERC20
+    // IExchanger public synthetixExchanger = IExchanger(address(0x0bfDc04B38251394542586969E2356d0D731f7DE));
 
     IERC20 public want = IERC20(address(0xA3D87FffcE63B53E0d54fAa1cc983B7eB0b74A9c)); // Curve.fi ETH/sEth (eCRV)
     IERC20 public weth = IERC20(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
@@ -56,14 +56,12 @@ contract ZapYvecrvSusd is Ownable {
 
         // In approves
         // Route: ETH ->(swapRouter)-> sUsd ->(synthetix)-> sEth ->(curveStableSwap)-> eCRV/want ->(yVault)-> yveCRV
-        sUsd.approve(address(synthetix), uint256(-1));
         sEth.approve(address(curveStableSwap), uint256(-1));
         want.safeApprove(address(yVault), uint256(-1));
 
         // Out approves
         // Route: yveCRV ->(yVault)-> eCRV/want ->(curveStableSwap)-> sEth ->(synthetix)-> sUsd ->(swapRouter)-> ETH
         want.safeApprove(address(curveStableSwap), uint256(-1));
-        sEth.approve(address(synthetix), uint256(-1));
         sUsd.approve(address(swapRouter), uint256(-1));
     }
 
@@ -85,6 +83,9 @@ contract ZapYvecrvSusd is Ownable {
 
         uint256 estimatedSethAmount = 0;
         if (percentSwapSeth > 0) {
+            IExchanger synthetixExchanger =
+                IExchanger(synthetixResolver.requireAndGetAddress("Exchanger", "could not get synthetix exchanger address"));
+
             uint256 swappingEthAmount = ethAmount.mul(percentSwapSeth).div(100);
             ethAmount = ethAmount.sub(swappingEthAmount);
 
@@ -100,6 +101,8 @@ contract ZapYvecrvSusd is Ownable {
     // Requires user to run: DelegateApprovals.approveExchangeOnBehalf(<zap_contract_address>)
     // synthetix DelegateApprovals contract: 0x15fd6e554874B9e70F832Ed37f231Ac5E142362f
     function swapEthToSeth() external payable {
+        ISynthetix synthetix = ISynthetix(synthetixResolver.requireAndGetAddress("Synthetix", "could not get synthetix address"));
+
         uint256 swappingEthAmount = address(this).balance;
         swapRouter.swapExactETHForTokens{value: swappingEthAmount}(swappingEthAmount, swapPathZapIn, address(this), now);
 
@@ -150,6 +153,9 @@ contract ZapYvecrvSusd is Ownable {
 
         uint256 estimatedSwappedEthAmount = 0;
         if (percentSwapSusd > 0) {
+            IExchanger synthetixExchanger =
+                IExchanger(synthetixResolver.requireAndGetAddress("Exchanger", "could not get synthetix exchanger address"));
+
             uint256 swappingWantAmount = wantAmount.mul(percentSwapSusd).div(100);
             wantAmount = wantAmount.sub(swappingWantAmount);
 
@@ -199,6 +205,8 @@ contract ZapYvecrvSusd is Ownable {
 
         uint256 sethBalance = sEth.balanceOf(address(this));
         if (sethBalance > 0) {
+            ISynthetix synthetix = ISynthetix(synthetixResolver.requireAndGetAddress("Synthetix", "could not get synthetix address"));
+
             sEth.transfer(msg.sender, sethBalance);
             synthetix.exchangeOnBehalf(msg.sender, "sETH", sethBalance, "sUSD");
         }

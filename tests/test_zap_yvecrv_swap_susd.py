@@ -1,17 +1,20 @@
-from brownie import Wei, web3, Contract
+from brownie import Wei, Contract
 
-sethKey = 0x7345544800000000000000000000000000000000000000000000000000000000
-susdKey = 0x7355534400000000000000000000000000000000000000000000000000000000
+sethKey = 0x7345544800000000000000000000000000000000000000000000000000000000  # "sETH"
+susdKey = 0x7355534400000000000000000000000000000000000000000000000000000000  # "sUSD"
+exchangerKey = 0x45786368616E6765720000000000000000000000000000000000000000000000  # "Exchanger"
+delegateApprovalsKey = 0x44656C6567617465417070726F76616C73000000000000000000000000000000  # "DelegateApprovals"
 
 
 def test_zap(accounts, ZapYvecrvSusd, vault_ecrv_live, interface, chain):
     whale = accounts.at("0xbe0eb53f46cd790cd13851d5eff43d12404d33e8", force=True)
     zap = whale.deploy(ZapYvecrvSusd)
     # zap = Contract("0x85dB618d507909570299d3e3cFfD0FC4D4F97FeF")
-    sEth = interface.ISynth(zap.sEth())
-    sUsd = interface.ISynth(zap.sUsd())
-    synthetixExchanger = interface.IExchanger(zap.synthetixExchanger())
-    delegateApprovals = interface.DelegateApprovals("0x15fd6e554874B9e70F832Ed37f231Ac5E142362f")
+    sEth = Contract(zap.sEth())
+    sUsd = Contract(zap.sUsd())
+    synthetixResolver = Contract(zap.synthetixResolver())
+    synthetixExchanger = Contract(synthetixResolver.getAddress(exchangerKey))
+    delegateApprovals = Contract(synthetixResolver.getAddress(delegateApprovalsKey))
 
     delegateApprovals.approveExchangeOnBehalf(zap, {"from": whale})
     sEth.approve(zap, 2 ** 256 - 1, {"from": whale})
