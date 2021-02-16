@@ -92,15 +92,23 @@ def keeper(accounts):
 
 
 @pytest.fixture
-def strategy_ecrv(strategist, keeper, vault_ecrv, StrategyCurveEcrv, gov, gov_live, voter_proxy):
+def strategy_ecrv(strategist, keeper, vault_ecrv, StrategyCurveEcrv, gov, gov_live, voter_proxy, strategy_ecrv_live, vault_ecrv_live, devychad):
+    vault_ecrv_live.updateStrategyDebtRatio(strategy_ecrv_live, 0, {"from": devychad})
+    strategy_ecrv_live.harvest({"from": devychad})
+
     strategy = strategist.deploy(StrategyCurveEcrv, vault_ecrv)
     strategy.setKeeper(keeper)
 
     debt_ratio = 10_000
-    vault_ecrv.addStrategy(strategy, debt_ratio, 0, 1000, {"from": gov})
+    vault_ecrv.addStrategy(strategy, debt_ratio, 0, 2 ** 256 - 1, 1000, {"from": gov})
     voter_proxy.approveStrategy(strategy.gauge(), strategy, {"from": gov_live})
 
     yield strategy
+
+    # teardown
+    vault_ecrv.updateStrategyDebtRatio(strategy, 0, {"from": gov})
+    strategy.harvest({"from": gov})
+    voter_proxy.approveStrategy(strategy.gauge(), strategy_ecrv_live, {"from": gov_live})
 
 
 @pytest.fixture

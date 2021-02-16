@@ -40,7 +40,7 @@ contract StrategyCurveEcrv is BaseStrategy {
     }
 
     function name() external view override returns (string memory) {
-        return "StrategyCurveEcrvStrategyProxy";
+        return "StrategyCurveEcrvVoterProxy";
     }
 
     function estimatedTotalAssets() public view override returns (uint256) {
