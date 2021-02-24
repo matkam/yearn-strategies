@@ -16,12 +16,16 @@ contract StrategyCurveEcrv is BaseStrategy {
     using SafeMath for uint256;
 
     address public constant gauge = address(0x3C0FFFF15EA30C35d7A85B85c0782D6c94e1d238);
+    address public constant voter = address(0xF147b8125d2ef93FB6965Db97D6746952a133934); // Yearn's veCRV voter
+    uint256 public constant keepCrvDenominator = 10000;
 
     address private uniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     address private sushiswapRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
 
-    address public crvRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    address public crvRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
     address[] public crvPathWeth;
+
+    uint256 public keepCrvPercent = 1000; // over keepCrvDenominator
 
     ICurveFi public curveStableSwap = ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sETH StableSwap pool contract
     StrategyProxy public proxy = StrategyProxy(address(0x9a3a03C614dc467ACC3e81275468e033c98d960E));
@@ -66,6 +70,10 @@ contract StrategyCurveEcrv is BaseStrategy {
 
             uint256 crvBalance = crv.balanceOf(address(this));
             if (crvBalance > 0) {
+                uint256 keepCrv = crvBalance.mul(keepCrvPercent).div(keepCrvDenominator);
+                IERC20(crv).safeTransfer(voter, keepCrv);
+
+                crvBalance = crv.balanceOf(address(this));
                 IUniswapV2Router02(crvRouter).swapExactTokensForETH(crvBalance, uint256(0), crvPathWeth, address(this), now);
             }
 
@@ -80,10 +88,10 @@ contract StrategyCurveEcrv is BaseStrategy {
         if (_debtOutstanding > 0) {
             if (_debtOutstanding > _profit) {
                 uint256 stakedBal = proxy.balanceOf(gauge);
-                proxy.withdraw(gauge, address(want), Math.min(stakedBal, _debtOutstanding - _profit));
+                proxy.withdraw(gauge, address(want), Math.min(stakedBal, _debtOutstanding));
             }
 
-            _debtPayment = Math.min(_debtOutstanding, want.balanceOf(address(this)).sub(_profit));
+            _debtPayment = Math.min(_debtOutstanding, want.balanceOf(address(this)));
         }
     }
 
@@ -109,20 +117,24 @@ contract StrategyCurveEcrv is BaseStrategy {
     function prepareMigration(address _newStrategy) internal override {
         // TODO: Transfer any non-`want` tokens to the new strategy
         // NOTE: `migrate` will automatically forward all `want` in this strategy to the new one
-        prepareReturn(proxy.balanceOf(gauge));
+        uint256 gaugeTokens = proxy.balanceOf(gauge);
+        if (gaugeTokens > 0) {
+            proxy.withdraw(gauge, address(want), gaugeTokens);
+        }
     }
 
     function protectedTokens() internal view override returns (address[] memory) {
-        address[] memory protected = new address[](1);
+        address[] memory protected = new address[](2);
         protected[0] = gauge;
+        protected[1] = address(crv);
 
         return protected;
     }
 
     //
-    // helper functions
+    // setters
     //
-    function setCRVRouter(bool isUniswap, address[] calldata _wethPath) public onlyGovernance {
+    function setCRVRouter(bool isUniswap, address[] calldata _wethPath) external onlyGovernance {
         if (isUniswap) {
             crvRouter = uniswapRouter;
         } else {
@@ -132,8 +144,12 @@ contract StrategyCurveEcrv is BaseStrategy {
         crv.approve(crvRouter, uint256(-1));
     }
 
-    function setProxy(address _proxy) public onlyGovernance {
+    function setProxy(address _proxy) external onlyGovernance {
         proxy = StrategyProxy(_proxy);
+    }
+
+    function setKeepCRV(uint256 _keepCrvPercent) external onlyGovernance {
+        keepCrvPercent = _keepCrvPercent;
     }
 
     // enable ability to recieve ETH
