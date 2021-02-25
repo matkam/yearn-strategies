@@ -28,7 +28,7 @@ contract StrategyCurveEcrv is BaseStrategy {
     uint256 public constant fee_denominator = 10000;
 
     ICurveFi public curveStableSwap = ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sETH StableSwap pool contract
-    StrategyProxy public proxy = StrategyProxy(address(0x9a3a03C614dc467ACC3e81275468e033c98d960E));
+    StrategyProxy public proxy = StrategyProxy(address(0x9a165622a744C20E3B2CB443AeD98110a33a231b));
 
     IERC20 public weth = IERC20(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
     IERC20 public sEth = IERC20(address(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb));
