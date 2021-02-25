@@ -17,15 +17,15 @@ contract StrategyCurveEcrv is BaseStrategy {
 
     address public constant gauge = address(0x3C0FFFF15EA30C35d7A85B85c0782D6c94e1d238);
     address public constant voter = address(0xF147b8125d2ef93FB6965Db97D6746952a133934); // Yearn's veCRV voter
-    uint256 public constant keepCrvDenominator = 10000;
 
     address private uniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
     address private sushiswapRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
 
-    address public crvRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
+    address public crvRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F; // default SushiSwap
     address[] public crvPathWeth;
 
-    uint256 public keepCrvPercent = 1000; // over keepCrvDenominator
+    uint256 public keepCRV = 1000;
+    uint256 public constant fee_denominator = 10000;
 
     ICurveFi public curveStableSwap = ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sETH StableSwap pool contract
     StrategyProxy public proxy = StrategyProxy(address(0x9a3a03C614dc467ACC3e81275468e033c98d960E));
@@ -70,7 +70,7 @@ contract StrategyCurveEcrv is BaseStrategy {
 
             uint256 crvBalance = crv.balanceOf(address(this));
             if (crvBalance > 0) {
-                uint256 keepCrv = crvBalance.mul(keepCrvPercent).div(keepCrvDenominator);
+                uint256 keepCrv = crvBalance.mul(keepCRV).div(fee_denominator);
                 IERC20(crv).safeTransfer(voter, keepCrv);
 
                 crvBalance = crv.balanceOf(address(this));
@@ -148,8 +148,8 @@ contract StrategyCurveEcrv is BaseStrategy {
         proxy = StrategyProxy(_proxy);
     }
 
-    function setKeepCRV(uint256 _keepCrvPercent) external onlyGovernance {
-        keepCrvPercent = _keepCrvPercent;
+    function setKeepCRV(uint256 _keepCRV) external onlyGovernance {
+        keepCRV = _keepCRV;
     }
 
     // enable ability to recieve ETH

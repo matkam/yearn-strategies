@@ -110,8 +110,6 @@ def strategy_ecrv(strategist, keeper, vault_ecrv, StrategyCurveEcrv, gov, gov_li
     yield strategy
 
     # teardown
-    vault_ecrv.updateStrategyDebtRatio(strategy, 0, {"from": gov})
-    strategy.harvest({"from": gov})
     voter_proxy.approveStrategy(strategy.gauge(), strategy_ecrv_live, {"from": gov_live})
 
 
