@@ -72,6 +72,7 @@ contract StrategyCurveEcrv is BaseStrategy {
             if (crvBalance > 0) {
                 uint256 keepCrv = crvBalance.mul(keepCRV).div(fee_denominator);
                 IERC20(crv).safeTransfer(voter, keepCrv);
+                proxy.lock();
 
                 crvBalance = crv.balanceOf(address(this));
                 IUniswapV2Router02(crvRouter).swapExactTokensForETH(crvBalance, uint256(0), crvPathWeth, address(this), now);
@@ -86,10 +87,8 @@ contract StrategyCurveEcrv is BaseStrategy {
         }
 
         if (_debtOutstanding > 0) {
-            if (_debtOutstanding > _profit) {
-                uint256 stakedBal = proxy.balanceOf(gauge);
-                proxy.withdraw(gauge, address(want), Math.min(stakedBal, _debtOutstanding));
-            }
+            uint256 stakedBal = proxy.balanceOf(gauge);
+            proxy.withdraw(gauge, address(want), Math.min(stakedBal, _debtOutstanding));
 
             _debtPayment = Math.min(_debtOutstanding, want.balanceOf(address(this)));
         }
