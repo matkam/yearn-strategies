@@ -25,7 +25,7 @@ contract StrategyCurveEcrv is BaseStrategy {
     address[] public crvPathWeth;
 
     uint256 public keepCRV = 1000;
-    uint256 public constant fee_denominator = 10000;
+    uint256 public constant FEE_DENOMINATOR = 10000;
 
     ICurveFi public curveStableSwap = ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sETH StableSwap pool contract
     StrategyProxy public proxy = StrategyProxy(address(0x9a165622a744C20E3B2CB443AeD98110a33a231b));
@@ -36,7 +36,8 @@ contract StrategyCurveEcrv is BaseStrategy {
 
     constructor(address _vault) public BaseStrategy(_vault) {
         want.safeApprove(address(proxy), uint256(-1));
-        crv.approve(crvRouter, uint256(-1));
+        crv.approve(uniswapRouter, uint256(-1));
+        crv.approve(sushiswapRouter, uint256(-1));
 
         crvPathWeth = new address[](2);
         crvPathWeth[0] = address(crv);
@@ -70,7 +71,7 @@ contract StrategyCurveEcrv is BaseStrategy {
 
             uint256 crvBalance = crv.balanceOf(address(this));
             if (crvBalance > 0) {
-                uint256 keepCrv = crvBalance.mul(keepCRV).div(fee_denominator);
+                uint256 keepCrv = crvBalance.mul(keepCRV).div(FEE_DENOMINATOR);
                 IERC20(crv).safeTransfer(voter, keepCrv);
                 proxy.lock();
 
@@ -140,7 +141,6 @@ contract StrategyCurveEcrv is BaseStrategy {
             crvRouter = sushiswapRouter;
         }
         crvPathWeth = _wethPath;
-        crv.approve(crvRouter, uint256(-1));
     }
 
     function setProxy(address _proxy) external onlyGovernance {
