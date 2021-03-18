@@ -108,11 +108,7 @@ contract StrategyCurveEcrv is BaseStrategy {
         _liquidatedAmount = Math.min(_amountNeeded, want.balanceOf(address(this)));
     }
 
-    // NOTE: Can override `tendTrigger` and `harvestTrigger` if necessary
-
     function prepareMigration(address _newStrategy) internal override {
-        // TODO: Transfer any non-`want` tokens to the new strategy
-        // NOTE: `migrate` will automatically forward all `want` in this strategy to the new one
         uint256 gaugeTokens = proxy.balanceOf(gauge);
         if (gaugeTokens > 0) {
             proxy.withdraw(gauge, address(want), gaugeTokens);
