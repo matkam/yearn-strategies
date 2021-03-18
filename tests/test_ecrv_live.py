@@ -96,23 +96,23 @@ def test_migrate_live(token_ecrv, StrategyCurveEcrv, strategy_ecrv_live, chain, 
 
     # teardown
     vault_ecrv_live.updateStrategyDebtRatio(strategy_ecrv2, 0, {"from": gov_live})
-    strategy_ecrv2.harvest({"from": dev})
+    strategy_ecrv2.harvest({"from": gov_live})
     gauge = "0x3C0FFFF15EA30C35d7A85B85c0782D6c94e1d238"
     voter_proxy.approveStrategy(gauge, strategy_ecrv_live, {"from": gov_live})
     vault_ecrv_live.updateStrategyDebtRatio(strategy_ecrv_live, 1000, {"from": gov_live})
 
 
-def test_revoke_live(token_ecrv, strategy_ecrv_live, vault_ecrv_live, whale, devychad):
+def test_revoke_live(token_ecrv, strategy_ecrv_live, vault_ecrv_live, whale, gov_live):
     token_ecrv.approve(vault_ecrv_live, 2 ** 256 - 1, {"from": whale})
     vault_ecrv_live.deposit(Wei("100 ether"), {"from": whale})
-    strategy_ecrv_live.harvest({"from": devychad})
+    strategy_ecrv_live.harvest({"from": gov_live})
 
     genericStateOfStrat(strategy_ecrv_live, token_ecrv, vault_ecrv_live)
     genericStateOfVault(vault_ecrv_live, token_ecrv)
 
-    vault_ecrv_live.revokeStrategy(strategy_ecrv_live, {"from": devychad})
+    vault_ecrv_live.revokeStrategy(strategy_ecrv_live, {"from": gov_live})
 
-    strategy_ecrv_live.harvest({"from": devychad})
+    strategy_ecrv_live.harvest({"from": gov_live})
 
     genericStateOfStrat(strategy_ecrv_live, token_ecrv, vault_ecrv_live)
     genericStateOfVault(vault_ecrv_live, token_ecrv)
