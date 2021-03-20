@@ -6,7 +6,7 @@ import {BaseStrategy} from "@yearnvaults/contracts/BaseStrategy.sol";
 import {SafeERC20, SafeMath, IERC20, Address} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/math/Math.sol";
 
-import {ICurveFi, ICrvV3} from "../interfaces/curve.sol";
+import {ICurveFi} from "../interfaces/curve.sol";
 import {IUniswapV2Router02} from "../interfaces/uniswap.sol";
 import {StrategyProxy} from "../interfaces/yearn.sol";
 
@@ -16,12 +16,12 @@ contract StrategyCurveEcrv is BaseStrategy {
     using SafeMath for uint256;
 
     address public constant gauge = address(0x3C0FFFF15EA30C35d7A85B85c0782D6c94e1d238);
-    address public constant voter = address(0xF147b8125d2ef93FB6965Db97D6746952a133934); // Yearn's veCRV voter
+    address public voter = address(0xF147b8125d2ef93FB6965Db97D6746952a133934); // Yearn's veCRV voter
 
-    address private uniswapRouter = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-    address private sushiswapRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
+    address private uniswapRouter = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    address private sushiswapRouter = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
 
-    address public crvRouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F; // default SushiSwap
+    address public crvRouter = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F); // default SushiSwap
     address[] public crvPathWeth;
 
     uint256 public keepCRV = 1000;
@@ -33,12 +33,12 @@ contract StrategyCurveEcrv is BaseStrategy {
 
     IERC20 public weth = IERC20(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
     IERC20 public sEth = IERC20(address(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb));
-    ICrvV3 public crv = ICrvV3(address(0xD533a949740bb3306d119CC777fa900bA034cd52));
+    IERC20 public crv = IERC20(address(0xD533a949740bb3306d119CC777fa900bA034cd52));
 
     constructor(address _vault) public BaseStrategy(_vault) {
         want.safeApprove(address(proxy), uint256(-1));
-        crv.approve(uniswapRouter, uint256(-1));
-        crv.approve(sushiswapRouter, uint256(-1));
+        crv.safeApprove(uniswapRouter, uint256(-1));
+        crv.safeApprove(sushiswapRouter, uint256(-1));
 
         crvPathWeth = new address[](2);
         crvPathWeth[0] = address(crv);
@@ -69,7 +69,7 @@ contract StrategyCurveEcrv is BaseStrategy {
             uint256 crvBalance = crv.balanceOf(address(this));
             if (crvBalance > minToSwap) {
                 uint256 keepCrv = crvBalance.mul(keepCRV).div(FEE_DENOMINATOR);
-                IERC20(crv).safeTransfer(voter, keepCrv);
+                crv.safeTransfer(voter, keepCrv);
 
                 crvBalance = crv.balanceOf(address(this));
                 IUniswapV2Router02(crvRouter).swapExactTokensForETH(crvBalance, uint256(0), crvPathWeth, address(this), now);
@@ -137,6 +137,10 @@ contract StrategyCurveEcrv is BaseStrategy {
 
     function setProxy(address _proxy) external onlyGovernance {
         proxy = StrategyProxy(_proxy);
+    }
+
+    function setVoter(address _voter) external onlyGovernance {
+        voter = _voter;
     }
 
     function setKeepCRV(uint256 _keepCRV) external onlyGovernance {
