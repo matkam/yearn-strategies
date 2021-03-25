@@ -126,13 +126,8 @@ contract StrategyCurveEcrv is BaseStrategy {
     //
     // setters
     //
-    function setCRVRouter(bool isUniswap, address[] calldata _wethPath) external onlyAuthorized {
-        if (isUniswap) {
-            crvRouter = uniswapRouter;
-        } else {
-            crvRouter = sushiswapRouter;
-        }
-        crvPathWeth = _wethPath;
+    function setCRVRouter(bool isUniswap) external onlyAuthorized {
+        crvRouter = isUniswap ? uniswapRouter : sushiswapRouter;
     }
 
     function setProxy(address _proxy) external onlyGovernance {
