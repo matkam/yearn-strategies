@@ -31,10 +31,7 @@ def test_ops_live(
     whalebefore = token_ecrv.balanceOf(whale)
     token_ecrv.approve(vault_ecrv_live, 2 ** 256 - 1, {"from": whale})
     vault_ecrv_live.deposit(Wei("100 ether"), {"from": whale})
-    assert token_ecrv.balanceOf(strategy_ecrv_live) == Wei("100 ether")
-
     strategy_ecrv_live.harvest({"from": dev})
-    assert token_ecrv.balanceOf(strategy_ecrv_live) == 0
 
     genericStateOfStrat(strategy_ecrv_live, token_ecrv, vault_ecrv_live)
     genericStateOfVault(vault_ecrv_live, token_ecrv)
@@ -63,22 +60,7 @@ def test_ops_live(
 
 
 def test_migrate_live(token_ecrv, StrategyCurveEcrv, strategy_ecrv_live, chain, vault_ecrv_live, whale, dev, devychad, gov_live, voter_proxy):
-    # token_ecrv.approve(vault_ecrv_live, 2 ** 256 - 1, {"from": whale})
-    # vault_ecrv_live.deposit(Wei("100 ether"), {"from": whale})
-    # strategy_ecrv_live.harvest({"from": dev})
-
-    # genericStateOfStrat(strategy_ecrv_live, token_ecrv, vault_ecrv_live)
-    # genericStateOfVault(vault_ecrv_live, token_ecrv)
-
-    # chain.sleep(2592000)
-    # chain.mine(1)
-
-    # assets_before = vault_ecrv_live.totalAssets()
-    # strategy_ecrv_live.harvest({"from": dev})
-
-    # print(
-    #     "\nEstimated APR: ", "{:.2%}".format((vault_ecrv_live.totalAssets() - assets_before) / assets_before * 12),
-    # )
+    strategy_ecrv_live.harvest({"from": gov_live})
 
     genericStateOfStrat(strategy_ecrv_live, token_ecrv, vault_ecrv_live)
     genericStateOfVault(vault_ecrv_live, token_ecrv)
@@ -89,21 +71,30 @@ def test_migrate_live(token_ecrv, StrategyCurveEcrv, strategy_ecrv_live, chain, 
     assert vaultAssets == vaultDebt + vaultLoose
 
     strategy_ecrv2 = dev.deploy(StrategyCurveEcrv, vault_ecrv_live)
+
+    # temporary until actual migration
+    vault_ecrv_live.updateStrategyDebtRatio(strategy_ecrv_live, 0, {"from": gov_live})
+    strategy_ecrv_live.harvest({"from": gov_live})
+
     vault_ecrv_live.migrateStrategy(strategy_ecrv_live, strategy_ecrv2, {"from": gov_live})
     voter_proxy.approveStrategy(strategy_ecrv2.gauge(), strategy_ecrv2, {"from": gov_live})
+    vault_ecrv_live.updateStrategyDebtRatio(strategy_ecrv2, 9_980, {"from": gov_live})  # temporary
     strategy_ecrv2.harvest({"from": gov_live})
 
     genericStateOfStrat(strategy_ecrv_live, token_ecrv, vault_ecrv_live)
     genericStateOfStrat(strategy_ecrv2, token_ecrv, vault_ecrv_live)
     genericStateOfVault(vault_ecrv_live, token_ecrv)
 
-    assert vault_ecrv_live.totalAssets() == vaultAssets
-    assert vault_ecrv_live.totalDebt() + token_ecrv.balanceOf(vault_ecrv_live) == vaultDebt + vaultLoose
+    assert vault_ecrv_live.totalAssets() >= vaultAssets
+    assert vault_ecrv_live.totalAssets() < vaultAssets + Wei("0.1 ether")
+    assert vault_ecrv_live.totalDebt() + token_ecrv.balanceOf(vault_ecrv_live) >= vaultDebt + vaultLoose
+    assert vault_ecrv_live.totalDebt() + token_ecrv.balanceOf(vault_ecrv_live) < vaultDebt + vaultLoose + Wei("0.1 ether")
 
     # teardown
-    vault_ecrv_live.migrateStrategy(strategy_ecrv2, strategy_ecrv_live, {"from": gov_live})
-    voter_proxy.approveStrategy(strategy_ecrv_live.gauge(), strategy_ecrv_live, {"from": gov_live})
+    vault_ecrv_live.updateStrategyDebtRatio(strategy_ecrv2, 0, {"from": gov_live})
     strategy_ecrv2.harvest({"from": gov_live})
+    voter_proxy.approveStrategy(strategy_ecrv_live.gauge(), strategy_ecrv_live, {"from": gov_live})
+    vault_ecrv_live.updateStrategyDebtRatio(strategy_ecrv_live, 1000, {"from": gov_live})
 
 
 def test_revoke_live(token_ecrv, strategy_ecrv_live, vault_ecrv_live, whale, gov_live):
@@ -115,7 +106,6 @@ def test_revoke_live(token_ecrv, strategy_ecrv_live, vault_ecrv_live, whale, gov
     genericStateOfVault(vault_ecrv_live, token_ecrv)
 
     vault_ecrv_live.revokeStrategy(strategy_ecrv_live, {"from": gov_live})
-
     strategy_ecrv_live.harvest({"from": gov_live})
 
     genericStateOfStrat(strategy_ecrv_live, token_ecrv, vault_ecrv_live)
