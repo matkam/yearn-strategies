@@ -93,8 +93,8 @@ def test_reduce_limit(token_ecrv, strategy_ecrv, vault_ecrv, whale, gov, strateg
     token_ecrv.approve(vault_ecrv, 2 ** 256 - 1, {"from": whale})
     vault_ecrv.deposit(Wei("100 ether"), {"from": whale})
     strategy_ecrv.harvest({"from": strategist})
+    assert token_ecrv.balanceOf(vault_ecrv) < Wei("1 gwei")
 
-    assert token_ecrv.balanceOf(vault_ecrv) == 0
     vault_ecrv.updateStrategyDebtRatio(strategy_ecrv, 5_000, {"from": gov})
     strategy_ecrv.harvest({"from": strategist})
-    assert token_ecrv.balanceOf(vault_ecrv) > 0
+    assert token_ecrv.balanceOf(vault_ecrv) > Wei("1 gwei")

@@ -71,24 +71,16 @@ def test_migrate_live(token_ecrv, StrategyCurveEcrv, strategy_ecrv_live, chain, 
     assert vaultAssets == vaultDebt + vaultLoose
 
     strategy_ecrv2 = dev.deploy(StrategyCurveEcrv, vault_ecrv_live)
-
-    # temporary until actual migration
-    vault_ecrv_live.updateStrategyDebtRatio(strategy_ecrv_live, 0, {"from": gov_live})
-    strategy_ecrv_live.harvest({"from": gov_live})
-
     vault_ecrv_live.migrateStrategy(strategy_ecrv_live, strategy_ecrv2, {"from": gov_live})
     voter_proxy.approveStrategy(strategy_ecrv2.gauge(), strategy_ecrv2, {"from": gov_live})
-    vault_ecrv_live.updateStrategyDebtRatio(strategy_ecrv2, 9_980, {"from": gov_live})  # temporary
     strategy_ecrv2.harvest({"from": gov_live})
 
     genericStateOfStrat(strategy_ecrv_live, token_ecrv, vault_ecrv_live)
     genericStateOfStrat(strategy_ecrv2, token_ecrv, vault_ecrv_live)
     genericStateOfVault(vault_ecrv_live, token_ecrv)
 
-    assert vault_ecrv_live.totalAssets() >= vaultAssets
-    assert vault_ecrv_live.totalAssets() < vaultAssets + Wei("0.1 ether")
-    assert vault_ecrv_live.totalDebt() + token_ecrv.balanceOf(vault_ecrv_live) >= vaultDebt + vaultLoose
-    assert vault_ecrv_live.totalDebt() + token_ecrv.balanceOf(vault_ecrv_live) < vaultDebt + vaultLoose + Wei("0.1 ether")
+    assert vault_ecrv_live.totalAssets() == vaultAssets
+    assert vault_ecrv_live.totalDebt() + token_ecrv.balanceOf(vault_ecrv_live) == vaultDebt + vaultLoose
 
     # teardown
     vault_ecrv_live.updateStrategyDebtRatio(strategy_ecrv2, 0, {"from": gov_live})

@@ -64,6 +64,7 @@ contract StrategyCurveEcrv is BaseStrategy {
     {
         uint256 gaugeTokens = proxy.balanceOf(gauge);
         if (gaugeTokens > 0) {
+            uint256 startingWantBalance = want.balanceOf(address(this));
             proxy.harvest(gauge);
 
             uint256 crvBalance = crv.balanceOf(address(this));
@@ -80,7 +81,7 @@ contract StrategyCurveEcrv is BaseStrategy {
                 curveStableSwap.add_liquidity{value: ethBalance}([ethBalance, 0], 0);
             }
 
-            _profit = want.balanceOf(address(this));
+            _profit = want.balanceOf(address(this)).sub(startingWantBalance);
         }
 
         if (_debtOutstanding > 0) {
