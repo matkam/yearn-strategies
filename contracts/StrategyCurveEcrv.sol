@@ -16,16 +16,15 @@ contract StrategyCurveEcrv is BaseStrategy {
     using SafeMath for uint256;
 
     address public constant gauge = address(0x3C0FFFF15EA30C35d7A85B85c0782D6c94e1d238);
-    address public voter = address(0xF147b8125d2ef93FB6965Db97D6746952a133934); // Yearn's veCRV voter
+    address public constant voter = address(0xF147b8125d2ef93FB6965Db97D6746952a133934); // Yearn's veCRV voter
 
-    address private uniswapRouter = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-    address private sushiswapRouter = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
-
-    address public crvRouter = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F); // default SushiSwap
+    address private constant uniswapRouter = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    address private constant sushiswapRouter = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
+    address public dex = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F); // default SushiSwap
     address[] public crvPathWeth;
 
     uint256 public keepCRV = 1000;
-    uint256 public constant FEE_DENOMINATOR = 10000;
+    uint256 public constant DENOMINATOR = 10000;
     uint256 public constant minToSwap = 1000000000; // 1 gwei
 
     ICurveFi public curveStableSwap = ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sETH StableSwap pool contract
@@ -43,10 +42,14 @@ contract StrategyCurveEcrv is BaseStrategy {
         crvPathWeth = new address[](2);
         crvPathWeth[0] = address(crv);
         crvPathWeth[1] = address(weth);
+
+        minReportDelay = 6 hours;
+        maxReportDelay = 24 hours;
+        debtThreshold = 2e21;
     }
 
     function name() external view override returns (string memory) {
-        return "StrategyCurveEcrvVoterProxy";
+        return "CurveeCRVVoterProxy";
     }
 
     function estimatedTotalAssets() public view override returns (uint256) {
@@ -64,16 +67,16 @@ contract StrategyCurveEcrv is BaseStrategy {
     {
         uint256 gaugeTokens = proxy.balanceOf(gauge);
         if (gaugeTokens > 0) {
-            uint256 startingWantBalance = want.balanceOf(address(this));
+            uint256 startingWantBalance = balanceOfWant();
             proxy.harvest(gauge);
 
             uint256 crvBalance = crv.balanceOf(address(this));
             if (crvBalance > minToSwap) {
-                uint256 keepCrv = crvBalance.mul(keepCRV).div(FEE_DENOMINATOR);
+                uint256 keepCrv = crvBalance.mul(keepCRV).div(DENOMINATOR);
                 crv.safeTransfer(voter, keepCrv);
 
                 crvBalance = crv.balanceOf(address(this));
-                IUniswapV2Router02(crvRouter).swapExactTokensForETH(crvBalance, uint256(0), crvPathWeth, address(this), now);
+                IUniswapV2Router02(dex).swapExactTokensForETH(crvBalance, uint256(0), crvPathWeth, address(this), now);
             }
 
             uint256 ethBalance = address(this).balance;
@@ -81,32 +84,32 @@ contract StrategyCurveEcrv is BaseStrategy {
                 curveStableSwap.add_liquidity{value: ethBalance}([ethBalance, 0], 0);
             }
 
-            _profit = want.balanceOf(address(this)).sub(startingWantBalance);
+            _profit = balanceOfWant().sub(startingWantBalance);
         }
 
         if (_debtOutstanding > 0) {
             uint256 stakedBal = proxy.balanceOf(gauge);
             proxy.withdraw(gauge, address(want), Math.min(stakedBal, _debtOutstanding));
 
-            _debtPayment = Math.min(_debtOutstanding, want.balanceOf(address(this)));
+            _debtPayment = Math.min(_debtOutstanding, balanceOfWant());
         }
     }
 
     function adjustPosition(uint256 _debtOutstanding) internal override {
-        uint256 _toInvest = want.balanceOf(address(this));
+        uint256 _toInvest = balanceOfWant();
         want.safeTransfer(address(proxy), _toInvest);
         proxy.deposit(gauge, address(want));
     }
 
     function liquidatePosition(uint256 _amountNeeded) internal override returns (uint256 _liquidatedAmount, uint256 _loss) {
-        uint256 wantBal = want.balanceOf(address(this));
+        uint256 wantBal = balanceOfWant();
         uint256 stakedBal = proxy.balanceOf(gauge);
 
         if (_amountNeeded > wantBal) {
             proxy.withdraw(gauge, address(want), Math.min(stakedBal, _amountNeeded - wantBal));
         }
 
-        _liquidatedAmount = Math.min(_amountNeeded, want.balanceOf(address(this)));
+        _liquidatedAmount = Math.min(_amountNeeded, balanceOfWant());
     }
 
     function prepareMigration(address _newStrategy) internal override {
@@ -124,19 +127,23 @@ contract StrategyCurveEcrv is BaseStrategy {
         return protected;
     }
 
+    function balanceOfWant() public view returns (uint256) {
+        return want.balanceOf(address(this));
+    }
+
+    function balanceOfPool() public view returns (uint256) {
+        return proxy.balanceOf(gauge);
+    }
+
     //
     // setters
     //
-    function setCRVRouter(bool isUniswap) external onlyAuthorized {
-        crvRouter = isUniswap ? uniswapRouter : sushiswapRouter;
+    function switchDex(bool isUniswap) external onlyAuthorized {
+        dex = isUniswap ? uniswapRouter : sushiswapRouter;
     }
 
     function setProxy(address _proxy) external onlyGovernance {
         proxy = StrategyProxy(_proxy);
-    }
-
-    function setVoter(address _voter) external onlyGovernance {
-        voter = _voter;
     }
 
     function setKeepCRV(uint256 _keepCRV) external onlyGovernance {
