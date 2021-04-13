@@ -21,7 +21,7 @@ contract StrategyCurveEcrv is BaseStrategy {
 
     address private constant uniswapRouter = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     address private constant sushiswapRouter = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
-    address public dex = address(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F); // default SushiSwap
+    address public dex = sushiswapRouter; // default SushiSwap
     address[] public crvPathWeth;
 
     uint256 public keepCRV = 1000;
@@ -75,7 +75,7 @@ contract StrategyCurveEcrv is BaseStrategy {
                 uint256 keepCrv = crvBalance.mul(keepCRV).div(DENOMINATOR);
                 crv.safeTransfer(voter, keepCrv);
 
-                crvBalance = crv.balanceOf(address(this));
+                crvBalance = crv.sub(keepCrv);
                 IUniswapV2Router02(dex).swapExactTokensForETH(crvBalance, uint256(0), crvPathWeth, address(this), now);
             }
 
