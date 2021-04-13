@@ -25,7 +25,7 @@ contract StrategyCurveEcrv is BaseStrategy {
 
     uint256 public keepCRV = 1000;
     uint256 public constant DENOMINATOR = 10000;
-    uint256 public constant minToSwap = 1000000000; // 1 gwei
+    uint256 public constant minToSwap = 1e9; // 1 gwei
 
     ICurveFi public curveStableSwap = ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sETH StableSwap pool contract
     StrategyProxy public proxy = StrategyProxy(address(0x9a165622a744C20E3B2CB443AeD98110a33a231b));

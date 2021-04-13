@@ -1,12 +1,15 @@
 from helpers import genericStateOfStrat, genericStateOfVault
 from brownie import Wei
 
+dust = Wei("10000 gwei")
+
 
 def test_ops(token_seth, token_ecrv, strategy_ecrv, chain, vault_ecrv, voter_proxy, whale, strategist):
     token_ecrv.approve(vault_ecrv, 2 ** 256 - 1, {"from": whale})
     whalebefore = token_ecrv.balanceOf(whale)
     vault_ecrv.deposit(Wei("100 ether"), {"from": whale})
     strategy_ecrv.harvest({"from": strategist})
+    assert token_ecrv.balanceOf(vault_ecrv) < dust
     assets_before = vault_ecrv.totalAssets()
 
     genericStateOfStrat(strategy_ecrv, token_ecrv, vault_ecrv)
@@ -39,6 +42,7 @@ def test_migrate(token_ecrv, StrategyCurveEcrv, strategy_ecrv, chain, vault_ecrv
     vault_ecrv.deposit(Wei("100 ether"), {"from": whale})
     strategy_ecrv.harvest({"from": strategist})
     assets_before = vault_ecrv.totalAssets()
+    assert token_ecrv.balanceOf(vault_ecrv) < dust
 
     genericStateOfStrat(strategy_ecrv, token_ecrv, vault_ecrv)
     genericStateOfVault(vault_ecrv, token_ecrv)
@@ -77,6 +81,7 @@ def test_revoke(token_ecrv, strategy_ecrv, vault_ecrv, whale, gov, strategist):
     token_ecrv.approve(vault_ecrv, 2 ** 256 - 1, {"from": whale})
     vault_ecrv.deposit(Wei("100 ether"), {"from": whale})
     strategy_ecrv.harvest({"from": strategist})
+    assert token_ecrv.balanceOf(vault_ecrv) < dust
 
     genericStateOfStrat(strategy_ecrv, token_ecrv, vault_ecrv)
     genericStateOfVault(vault_ecrv, token_ecrv)
@@ -93,8 +98,8 @@ def test_reduce_limit(token_ecrv, strategy_ecrv, vault_ecrv, whale, gov, strateg
     token_ecrv.approve(vault_ecrv, 2 ** 256 - 1, {"from": whale})
     vault_ecrv.deposit(Wei("100 ether"), {"from": whale})
     strategy_ecrv.harvest({"from": strategist})
-    assert token_ecrv.balanceOf(vault_ecrv) < Wei("1 gwei")
+    assert token_ecrv.balanceOf(vault_ecrv) < dust
 
     vault_ecrv.updateStrategyDebtRatio(strategy_ecrv, 5_000, {"from": gov})
     strategy_ecrv.harvest({"from": strategist})
-    assert token_ecrv.balanceOf(vault_ecrv) > Wei("1 gwei")
+    assert token_ecrv.balanceOf(vault_ecrv) > dust
