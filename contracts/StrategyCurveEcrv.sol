@@ -54,7 +54,7 @@ contract StrategyCurveEcrv is BaseStrategy {
     }
 
     function estimatedTotalAssets() public view override returns (uint256) {
-        return proxy.balanceOf(gauge);
+        return balanceOfWant().add(balanceOfPool());
     }
 
     function prepareReturn(uint256 _debtOutstanding)
