@@ -44,9 +44,9 @@ contract StrategyCurveEcrv is BaseStrategy {
         crvPathWeth[0] = address(crv);
         crvPathWeth[1] = address(weth);
 
-        minReportDelay = 4 hours;
-        maxReportDelay = 8 hours;
-        debtThreshold = 2e21;
+        minReportDelay = 6 hours;
+        maxReportDelay = 2 days;
+        debtThreshold = 1e21;
     }
 
     function name() external view override returns (string memory) {
