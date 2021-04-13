@@ -43,8 +43,8 @@ contract StrategyCurveEcrv is BaseStrategy {
         crvPathWeth[0] = address(crv);
         crvPathWeth[1] = address(weth);
 
-        minReportDelay = 6 hours;
-        maxReportDelay = 24 hours;
+        minReportDelay = 4 hours;
+        maxReportDelay = 8 hours;
         debtThreshold = 2e21;
     }
 

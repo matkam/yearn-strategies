@@ -30,6 +30,7 @@ def test_ops(token_seth, token_ecrv, strategy_ecrv, chain, vault_ecrv, voter_pro
         "\nEstimated APR: ", "{:.2%}".format((vault_ecrv.totalAssets() - assets_before) / assets_before * 12),
     )
 
+    chain.sleep(21600)  # 6 hour sandwitch protection
     vault_ecrv.withdraw({"from": whale})
     print("\nWithdraw")
     genericStateOfStrat(strategy_ecrv, token_ecrv, vault_ecrv)
