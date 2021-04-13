@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
+
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
@@ -27,12 +28,12 @@ contract StrategyCurveEcrv is BaseStrategy {
     uint256 public constant DENOMINATOR = 10000;
     uint256 public constant minToSwap = 1e9; // 1 gwei
 
-    ICurveFi public curveStableSwap = ICurveFi(address(0xc5424B857f758E906013F3555Dad202e4bdB4567)); // Curve ETH/sETH StableSwap pool contract
-    StrategyProxy public proxy = StrategyProxy(address(0x9a165622a744C20E3B2CB443AeD98110a33a231b));
+    ICurveFi public curveStableSwap = ICurveFi(0xc5424B857f758E906013F3555Dad202e4bdB4567); // Curve ETH/sETH StableSwap pool contract
+    StrategyProxy public proxy = StrategyProxy(0x9a165622a744C20E3B2CB443AeD98110a33a231b);
 
-    IERC20 public weth = IERC20(address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
-    IERC20 public sEth = IERC20(address(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb));
-    IERC20 public crv = IERC20(address(0xD533a949740bb3306d119CC777fa900bA034cd52));
+    IERC20 public weth = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    IERC20 public sEth = IERC20(0x5e74C9036fb86BD7eCdcb084a0673EFc32eA31cb);
+    IERC20 public crv = IERC20(0xD533a949740bb3306d119CC777fa900bA034cd52);
 
     constructor(address _vault) public BaseStrategy(_vault) {
         want.safeApprove(address(proxy), uint256(-1));
