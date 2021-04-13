@@ -36,7 +36,6 @@ contract StrategyCurveEcrv is BaseStrategy {
     IERC20 public crv = IERC20(0xD533a949740bb3306d119CC777fa900bA034cd52);
 
     constructor(address _vault) public BaseStrategy(_vault) {
-        want.safeApprove(address(proxy), uint256(-1));
         crv.safeApprove(uniswapRouter, uint256(-1));
         crv.safeApprove(sushiswapRouter, uint256(-1));
 
