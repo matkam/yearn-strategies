@@ -74,9 +74,13 @@ def vault_ecrv(pm, gov, rewards, guardian, token_ecrv):
 
 
 @pytest.fixture
-def vault_ecrv_live(pm):
-    Vault = pm(config["dependencies"][0]).Vault
-    yield Vault.at("0x0e880118C29F095143dDA28e64d95333A9e75A47")
+def vault_ecrv_live_old():
+    yield Contract("0x0e880118C29F095143dDA28e64d95333A9e75A47")
+
+
+@pytest.fixture
+def vault_ecrv_live():
+    yield Contract("0x986b4AFF588a109c09B50A03f42E4110E29D353F")
 
 
 @pytest.fixture
@@ -92,9 +96,10 @@ def keeper(accounts):
 
 
 @pytest.fixture
-def strategy_ecrv(strategist, keeper, vault_ecrv, StrategyCurveEcrv, gov, gov_live, voter_proxy, strategy_ecrv_live, vault_ecrv_live, devychad):
-    vault_ecrv_live.updateStrategyDebtRatio(strategy_ecrv_live, 0, {"from": devychad})
-    strategy_ecrv_live.harvest({"from": devychad})
+def strategy_ecrv(strategist, keeper, vault_ecrv, StrategyCurveEcrv, gov, gov_live, voter_proxy, strategy_ecrv_live, vault_ecrv_live):
+    vault_ecrv_live.updateStrategyDebtRatio(strategy_ecrv_live, 0, {"from": gov_live})
+    strategy_ecrv_live.harvest({"from": gov_live})
+    strategy_ecrv_live.harvest({"from": gov_live})
 
     strategy = strategist.deploy(StrategyCurveEcrv, vault_ecrv)
     strategy.setKeeper(keeper)
@@ -106,19 +111,22 @@ def strategy_ecrv(strategist, keeper, vault_ecrv, StrategyCurveEcrv, gov, gov_li
     yield strategy
 
     # teardown
-    vault_ecrv.updateStrategyDebtRatio(strategy, 0, {"from": gov})
-    strategy.harvest({"from": gov})
     voter_proxy.approveStrategy(strategy.gauge(), strategy_ecrv_live, {"from": gov_live})
 
 
 @pytest.fixture
+def strategy_ecrv_live_old():
+    yield Contract("0xB5F6747147990c4ddCeBbd0d4ef25461a967D079")
+
+
+@pytest.fixture
 def strategy_ecrv_live():
-    yield Contract("0x33e7c1718569d9f37B7a154B30Ae4f3C9f619A23")
+    yield Contract("0xdD498eB680B0CE6Cac17F7dab0C35Beb6E481a6d")
 
 
 @pytest.fixture
 def voter_proxy():
-    yield Contract("0x9a3a03C614dc467ACC3e81275468e033c98d960E")
+    yield Contract("0x9a165622a744C20E3B2CB443AeD98110a33a231b")
 
 
 @pytest.fixture
