@@ -99,6 +99,7 @@ def keeper(accounts):
 def strategy_ecrv(strategist, keeper, vault_ecrv, StrategyCurveEcrv, gov, gov_live, voter_proxy, strategy_ecrv_live, vault_ecrv_live):
     vault_ecrv_live.updateStrategyDebtRatio(strategy_ecrv_live, 0, {"from": gov_live})
     strategy_ecrv_live.harvest({"from": gov_live})
+    strategy_ecrv_live.harvest({"from": gov_live})
 
     strategy = strategist.deploy(StrategyCurveEcrv, vault_ecrv)
     strategy.setKeeper(keeper)
@@ -115,12 +116,12 @@ def strategy_ecrv(strategist, keeper, vault_ecrv, StrategyCurveEcrv, gov, gov_li
 
 @pytest.fixture
 def strategy_ecrv_live_old():
-    yield Contract("0x33e7c1718569d9f37B7a154B30Ae4f3C9f619A23")
+    yield Contract("0xB5F6747147990c4ddCeBbd0d4ef25461a967D079")
 
 
 @pytest.fixture
 def strategy_ecrv_live():
-    yield Contract("0xB5F6747147990c4ddCeBbd0d4ef25461a967D079")
+    yield Contract("0xdD498eB680B0CE6Cac17F7dab0C35Beb6E481a6d")
 
 
 @pytest.fixture

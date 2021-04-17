@@ -1,7 +1,7 @@
 from helpers import genericStateOfStrat, genericStateOfVault
 from brownie import Wei
 
-dust = Wei("10000 gwei")
+dust = Wei("20000 gwei")
 
 
 def test_ops(token_seth, token_ecrv, strategy_ecrv, chain, vault_ecrv, voter_proxy, whale, strategist):
