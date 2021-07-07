@@ -145,7 +145,7 @@ contract StrategyCurveEcrv is BaseStrategy {
         }
 
         _liquidatedAmount = Math.min(_amountNeeded, balanceOfWant());
-        require(_liquidatedAmount + _loss == _amountNeeded);
+        _loss = _amountNeeded.sub(_liquidatedAmount);
     }
 
     function prepareMigration(address _newStrategy) internal override {
